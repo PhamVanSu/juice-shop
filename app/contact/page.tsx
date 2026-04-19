@@ -72,19 +72,19 @@ export default function AboutContact() {
           <div className="grid md:grid-cols-2 gap-10 text-gray-600">
             <div className="space-y-6">
               <div>
-                <p className="text-sm text-gray-400">Địa chỉ</p>
-                <p className="font-medium">Bình Yên, Thạch Thất, Hà Nội</p>
+                <p className="text-sm text-gray-400">Facebook</p>
+                <p className="font-medium">https://www.facebook.com/nguyen.phuong.thao.280426</p>
               </div>
               <div>
                 <p className="text-sm text-gray-400">Hotline</p>
-                <p className="font-medium">09679 44379</p>
+                <p className="font-medium">0332 580 575</p>
               </div>
             </div>
 
             <div className="space-y-6">
               <div>
-                <p className="text-sm text-gray-400">Email</p>
-                <p className="font-medium">juicefresh@gmail.com</p>
+                <p className="text-sm text-gray-400">Địa chỉ</p>
+                <p className="font-medium">Bình Yên, Thạch Thất, Hà Nội</p>
               </div>
               <div>
                 <p className="text-sm text-gray-400">Giờ mở cửa</p>

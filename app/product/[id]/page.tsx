@@ -1,87 +1,152 @@
 "use client";
 
-export default function ProductOrange() {
+import { useParams, useRouter } from "next/navigation";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useEffect, useState } from "react";
+import { useCart } from "@/app/api/useCart";
+import RelatedProducts from "@/app/component/RelatedProducts";
+
+export default function ProductDetail() {
+  const router = useRouter();
+  const params = useParams();
+  const id = params?.id as string;
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const addToCart = useCart((state) => state.addToCart);
+
+  const handleAddToCart = () => {
+    if (product) {
+      addToCart(product);
+      // Hiệu ứng thông báo đơn giản (có thể thay bằng Toast)
+      alert(`Đã thêm ${product.title} vào giỏ hàng! 🥤`);
+    }
+  };
+
+   // Logic cho nút Mua ngay
+  const handleBuyNow = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if(product) {
+      addToCart(product);
+      router.push("/cart");
+    }
+  };
+
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const docRef = doc(db, "products", id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setProduct(docSnap.data());
+        }
+      } catch (error) {
+        console.error("Error fetching product:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [id]);
+
+  if (loading || !id) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-orange-50">
+        {/* Spinner xoay */}
+        <div className="relative flex items-center justify-center">
+          <div className="w-20 h-20 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin"></div>
+          <span className="absolute text-2xl animate-bounce">🥤</span>
+        </div>
+        <h2 className="mt-6 text-xl font-medium text-orange-800 animate-pulse">
+          Đang tải nước ép tươi ngon...
+        </h2>
+      </div>
+    );
+  }
+
+  // Giao diện khi không tìm thấy sản phẩm
+  if (!product) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-xl text-gray-500">Sản phẩm không tồn tại!</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-yellow-50 to-orange-100 py-16 px-6">
       {/* Header */}
-      <div className="text-center mb-12 animate-fadeIn">
-        <h1 className="text-5xl font-extrabold text-orange-600 drop-shadow-md">
-          Nước Ép Cam
+      <div className="text-center mb-12 animate-fade-in-down">
+        <h1 className="text-5xl font-extrabold text-orange-600 drop-shadow-sm">
+          {product.title}
         </h1>
         <p className="text-lg text-gray-700 mt-4 italic">
-          Tươi ngon – giàu Vitamin C – tăng cường sức khỏe
+          {product.sub_title}
         </p>
       </div>
 
-      {/* Product Detail */}
-      <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center bg-white rounded-3xl shadow-xl p-10 animate-slideUp">
-        {/* Image */}
-        <img
-          src="/images/home/orange.png"
-          alt="Nước ép cam"
-          className="rounded-3xl shadow-lg hover:scale-105 transition-transform duration-300"
-        />
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center bg-white rounded-3xl shadow-xl p-10 transform transition duration-500 hover:scale-[1.01]">
+        <div className="overflow-hidden rounded-3xl shadow-lg">
+          <img
+            src={product.image}
+            alt={product.name}
+            className="w-full h-full object-cover transform hover:scale-110 transition duration-700"
+          />
+        </div>
 
-        {/* Info */}
         <div>
-          <h2 className="text-3xl font-bold text-green-600 mb-4">Thông tin sản phẩm</h2>
-          <p className="text-gray-700 leading-relaxed mb-6">
-            Nước ép cam nguyên chất được làm từ những quả cam tươi ngon, giàu Vitamin C,
-            giúp tăng cường hệ miễn dịch, làm đẹp da và bổ sung năng lượng tự nhiên cho cơ thể.
+          <h2 className="text-3xl font-bold text-green-600 mb-4 flex items-center gap-2">
+            <span className="text-2xl">🌿</span> Thông tin sản phẩm
+          </h2>
+
+          <p className="text-gray-700 mb-6 leading-relaxed">
+            {product.description}
           </p>
-          <p className="text-gray-700 leading-relaxed mb-6">
-            <strong>Thành phần:</strong> 100% cam tươi ép lạnh, không chất bảo quản, không đường hóa học.
-          </p>
-          <p className="text-gray-700 leading-relaxed mb-6">
-            <strong>Dinh dưỡng:</strong> Vitamin C, Kali, Folate, chất chống oxy hóa.
-          </p>
-          <p className="text-2xl font-bold text-orange-500 mb-6">Giá: 30.000đ</p>
-          <button className="bg-orange-500 text-white font-bold px-8 py-3 rounded-full shadow hover:bg-orange-600 transition transform hover:scale-105">
-            Đặt hàng ngay
-          </button>
-          <button className="ml-3 bg-green-500 text-white font-bold px-8 py-3 rounded-full shadow hover:bg-green-600 transition transform hover:scale-105">
-            Thêm vào giỏ hàng
-          </button>
+
+          <div className="mb-8 p-4 bg-orange-50 rounded-2xl border border-orange-100">
+             <p className="text-sm text-gray-500 uppercase tracking-widest mb-1 font-semibold">Giá bán</p>
+             <p className="text-4xl font-black text-orange-500">
+               {Number(product.price).toLocaleString("vi-VN")}đ
+             </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4">
+            <button 
+              onClick={handleBuyNow}
+              className="bg-orange-500 text-white font-bold px-10 py-4 rounded-full shadow-lg hover:bg-orange-600 transition transform hover:scale-105 active:scale-95">
+              Đặt hàng ngay
+            </button>
+            <button 
+            onClick={handleAddToCart}
+            className="bg-green-500 text-white font-bold px-10 py-4 rounded-full shadow-lg hover:bg-green-600 transition transform hover:scale-105 active:scale-95">
+              Thêm vào giỏ hàng
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Benefits */}
-      <div className="max-w-6xl mx-auto mt-16 grid md:grid-cols-3 gap-8 animate-fadeIn">
-        <div className="bg-white rounded-2xl shadow-lg p-6 text-center hover:shadow-2xl transition transform hover:-translate-y-2">
-          <h3 className="text-xl font-bold text-green-500 mb-3">💪 Tăng cường miễn dịch</h3>
-          <p className="text-gray-700">Giàu Vitamin C giúp cơ thể chống lại bệnh tật.</p>
-        </div>
-        <div className="bg-white rounded-2xl shadow-lg p-6 text-center hover:shadow-2xl transition transform hover:-translate-y-2">
-          <h3 className="text-xl font-bold text-orange-500 mb-3">✨ Làm đẹp da</h3>
-          <p className="text-gray-700">Chống oxy hóa, giúp da sáng khỏe và mịn màng.</p>
-        </div>
-        <div className="bg-white rounded-2xl shadow-lg p-6 text-center hover:shadow-2xl transition transform hover:-translate-y-2">
-          <h3 className="text-xl font-bold text-pink-500 mb-3">⚡ Bổ sung năng lượng</h3>
-          <p className="text-gray-700">Giúp bạn tràn đầy sức sống mỗi ngày.</p>
-        </div>
+      <div className="max-w-6xl mx-auto mt-16 grid md:grid-cols-3 gap-8">
+        {[
+          { title: "Tăng cường miễn dịch", desc: "Giàu Vitamin C giúp cơ thể chống lại bệnh tật.", color: "text-green-500", icon: "💪" },
+          { title: "Làm đẹp da", desc: "Chống oxy hóa, giúp da sáng khỏe và mịn màng.", color: "text-orange-500", icon: "✨" },
+          { title: "Bổ sung năng lượng", desc: "Giúp bạn tràn đầy sức sống mỗi ngày.", color: "text-pink-500", icon: "⚡" },
+        ].map((benefit, idx) => (
+          <div key={idx} className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-2xl transition transform hover:-translate-y-2 border-b-4 border-transparent hover:border-orange-400">
+            <h3 className={`text-xl font-bold ${benefit.color} mb-3`}>
+              {benefit.icon} {benefit.title}
+            </h3>
+            <p className="text-gray-700">{benefit.desc}</p>
+          </div>
+        ))}
       </div>
-
-      {/* Related Products */}
-      <div className="max-w-6xl mx-auto mt-20 animate-slideUp">
-        <h2 className="text-3xl font-bold text-green-600 mb-8 text-center">Sản phẩm liên quan</h2>
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="bg-white rounded-2xl shadow-lg p-6 text-center hover:shadow-2xl transition transform hover:-translate-y-2">
-            <img src="/images/home/watermelon.png" alt="Nước ép dưa hấu" className="w-24 h-24 mx-auto mb-4" />
-            <h3 className="font-semibold text-gray-700">Nước ép dưa hấu</h3>
-            <p className="text-orange-500 font-bold">25.000đ</p>
-          </div>
-          <div className="bg-white rounded-2xl shadow-lg p-6 text-center hover:shadow-2xl transition transform hover:-translate-y-2">
-            <img src="/images/home/pineapple.png" alt="Nước ép dứa" className="w-24 h-24 mx-auto mb-4" />
-            <h3 className="font-semibold text-gray-700">Nước ép dứa</h3>
-            <p className="text-orange-500 font-bold">35.000đ</p>
-          </div>
-          <div className="bg-white rounded-2xl shadow-lg p-6 text-center hover:shadow-2xl transition transform hover:-translate-y-2">
-            <img src="/images/home/apple.png" alt="Nước ép táo" className="w-24 h-24 mx-auto mb-4" />
-            <h3 className="font-semibold text-gray-700">Nước ép táo</h3>
-            <p className="text-orange-500 font-bold">35.000đ</p>
-          </div>
-        </div>
-      </div>
+      <RelatedProducts currentProductId={id}/>
     </div>
   );
 }
