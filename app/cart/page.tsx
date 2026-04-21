@@ -15,12 +15,11 @@ export default function CartPage() {
   const cart = useCart((state) => state.cart);
   const removeFromCart = useCart((state) => state.removeFromCart);
   const updateQuantity = useCart((state) => state.updateQuantity);
+  const updateComment = useCart((state: any) => state.updateComment); // Lấy hàm updateComment
   const clearCart = useCart((state) => state.clearCart);
   
-  // Tính tổng tiền
   const total = cart.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0);
 
-  // State cho thông tin người đặt
   const [customerInfo, setCustomerInfo] = useState({
     name: "",
     phone: "",
@@ -31,49 +30,49 @@ export default function CartPage() {
     setIsClient(true);
   }, []);
 
-const handleOrder = async () => {
-  if (!customerInfo.name || !customerInfo.phone || !customerInfo.address) {
-    alert("Vui lòng điền đầy đủ thông tin giao hàng!");
-    return;
-  }
+  const handleOrder = async () => {
+    if (!customerInfo.name || !customerInfo.phone || !customerInfo.address) {
+      alert("Vui lòng điền đầy đủ thông tin giao hàng!");
+      return;
+    }
 
-  if (cart.length === 0) {
-    alert("Giỏ hàng đang trống!");
-    return;
-  }
+    if (cart.length === 0) {
+      alert("Giỏ hàng đang trống!");
+      return;
+    }
 
-  setIsSubmitting(true);
+    setIsSubmitting(true);
 
-  try {
-    const orderData = {
-      customer: {
-        name: customerInfo.name || "",
-        phone: customerInfo.phone || "",
-        address: customerInfo.address || "",
-      },
-      items: cart.map(item => ({
-        productId: item.id || item.cartId || "no-id", 
-        title: item.title || "Sản phẩm không tên",
-        price: Number(item.price) || 0,
-        quantity: Number(item.quantity) || 1,
-        image: item.image || ""
-      })),
-      totalAmount: total || 0,
-      status: "pending",
-      createdAt: serverTimestamp(),
-    };
+    try {
+      const orderData = {
+        customer: {
+          name: customerInfo.name || "",
+          phone: customerInfo.phone || "",
+          address: customerInfo.address || "",
+        },
+        items: cart.map(item => ({
+          productId: item.id || item.cartId || "no-id", 
+          title: item.title || "Sản phẩm không tên",
+          price: Number(item.price) || 0,
+          quantity: Number(item.quantity) || 1,
+          image: item.image || "",
+          comment: item.comment || "" // Lưu ghi chú vào Firestore
+        })),
+        totalAmount: total || 0,
+        status: "pending",
+        createdAt: serverTimestamp(),
+      };
 
-    const docRef = await addDoc(collection(db, "orders"), orderData);
-
-    clearCart();
-    router.push(`/order/${docRef.id}`);
-    
-  } catch (error) {
-    alert("Có lỗi xảy ra khi lưu đơn hàng. Vui lòng kiểm tra console!");
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+      const docRef = await addDoc(collection(db, "orders"), orderData);
+      clearCart();
+      router.push(`/order/${docRef.id}`);
+      
+    } catch (error) {
+      alert("Có lỗi xảy ra khi lưu đơn hàng.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (!isClient) return null;
 
@@ -91,63 +90,72 @@ const handleOrder = async () => {
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Danh sách sản phẩm tách dòng */}
             <div className="space-y-4">
               {cart.map((item) => (
-                <div key={item.cartId} className="flex items-center justify-between bg-orange-50 rounded-xl p-4 border border-orange-100 shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <img src={item.image} alt={item.title} className="w-16 h-16 rounded-lg object-cover shadow" />
-                    <div>
-                      <h2 className="font-bold text-gray-700">{item.title}</h2>
-                      <p className="text-sm text-gray-500">{Number(item.price).toLocaleString()}đ</p>
-                      <div className="flex items-center gap-2 mt-1 text-gray-400">
-                        <button onClick={() => updateQuantity(item.cartId, item.quantity - 1)} className="bg-white w-6 h-6 rounded-full border border-gray-400">-</button>
-                        <span className="text-sm font-bold">{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.cartId, item.quantity + 1)} className="bg-white w-6 h-6 rounded-full border border-gray-400">+</button>
+                <div key={item.cartId} className="bg-orange-50 rounded-xl p-4 border border-orange-100 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <img src={item.image} alt={item.title} className="w-16 h-16 rounded-lg object-cover shadow" />
+                      <div>
+                        <h2 className="font-bold text-gray-700">{item.title}</h2>
+                        <p className="text-sm text-gray-500">{Number(item.price).toLocaleString()}đ</p>
+                        <div className="flex items-center gap-2 mt-1 text-gray-400">
+                          <button onClick={() => updateQuantity(item.cartId, item.quantity - 1)} className="bg-white w-6 h-6 rounded-full border border-gray-400">-</button>
+                          <span className="text-sm font-bold text-gray-700">{item.quantity}</span>
+                          <button onClick={() => updateQuantity(item.cartId, item.quantity + 1)} className="bg-white w-6 h-6 rounded-full border border-gray-400">+</button>
+                        </div>
                       </div>
                     </div>
+                    <div className="text-right">
+                      <p className="text-orange-600 font-bold">{(Number(item.price) * item.quantity).toLocaleString()}đ</p>
+                      <button onClick={() => removeFromCart(item.cartId)} className="text-red-400 text-xs hover:underline mt-1">Xóa</button>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-orange-600 font-bold">{(Number(item.price) * item.quantity).toLocaleString()}đ</p>
-                    <button onClick={() => removeFromCart(item.cartId)} className="text-red-400 text-xs hover:underline mt-1">Xóa</button>
+                  
+                  {/* Ô nhập ghi chú cho từng món */}
+                  <div className="mt-3">
+                    <input
+                      type="text"
+                      placeholder="Ghi chú cho món này (VD: ít đường, không đá...)"
+                      className="w-full text-sm p-2 rounded-lg border border-orange-200 focus:ring-1 focus:ring-orange-400 outline-none bg-white/50 text-gray-600"
+                      value={item.comment || ""}
+                      onChange={(e) => updateComment(item.cartId, e.target.value)}
+                    />
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Tổng cộng */}
             <div className="flex justify-between items-center py-4 border-t border-b border-dashed border-orange-200">
               <span className="text-xl font-bold text-gray-600">Tổng thanh toán:</span>
               <span className="text-3xl font-black text-green-600">{total.toLocaleString()}đ</span>
             </div>
 
-            {/* Form thông tin khách hàng */}
             <div className="bg-green-50 p-6 rounded-2xl border border-green-100 space-y-4 text-gray-500">
               <h3 className="font-bold text-green-700 text-lg flex items-center gap-2">📍 Thông tin giao nhận</h3>
               <input
                 type="text"
                 placeholder="Tên người nhận"
-                className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-400 outline-none"
+                className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-400 outline-none text-gray-700"
                 value={customerInfo.name}
                 onChange={(e) => setCustomerInfo({...customerInfo, name: e.target.value})}
               />
               <input
                 type="text"
                 placeholder="Số điện thoại"
-                className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-400 outline-none"
+                className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-400 outline-none text-gray-700"
                 value={customerInfo.phone}
                 onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
               />
               <textarea
                 placeholder="Địa chỉ giao hàng chi tiết"
-                className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-400 outline-none"
+                className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-400 outline-none text-gray-700"
                 rows={3}
                 value={customerInfo.address}
                 onChange={(e) => setCustomerInfo({...customerInfo, address: e.target.value})}
               />
             </div>
 
-            {/* Nút hành động */}
             <div className="flex gap-4 pt-4">
               <button
                 onClick={() => router.push("/")}

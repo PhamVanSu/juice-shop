@@ -8,6 +8,7 @@ interface CartItem {
   price: number;
   image: string;
   quantity: number;
+  comment: string;
 }
 
 interface CartStore {
@@ -15,6 +16,7 @@ interface CartStore {
   addToCart: (product: any) => void;
   removeFromCart: (cartId: string) => void;
   updateQuantity: (cartId: string, qty: number) => void;
+  updateComment: (cartId: string, comment: string) => void;
   clearCart: () => void;
 }
 
@@ -35,7 +37,7 @@ export const useCart = create<CartStore>()(
           }
         ]
       })),
-
+      
       removeFromCart: (cartId) => set((state) => ({
         cart: state.cart.filter((item) => item.cartId !== cartId)
       })),
@@ -43,6 +45,12 @@ export const useCart = create<CartStore>()(
       updateQuantity: (cartId, qty) => set((state) => ({
         cart: state.cart.map((item) =>
           item.cartId === cartId ? { ...item, quantity: Math.max(qty, 1) } : item
+        )
+      })),
+
+      updateComment: (cartId, comment) => set((state) => ({
+        cart: state.cart.map((item) =>
+          item.cartId === cartId ? { ...item, comment: comment } : item
         )
       })),
 

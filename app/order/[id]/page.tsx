@@ -134,7 +134,7 @@ export default function OrderSuccess() {
                 {/* Thay src bằng link API QR thực tế nếu cần */}
                 <img src="/images/qr-code.png" alt="QR Code" className="w-full h-full object-cover" />
             </div>
-            <p className="text-xs text-gray-500 mt-2 italic">Nội dung: CK {order.id.slice(-6)}</p>
+            <p className="text-xs text-gray-500 mt-2 italic">TP Bank: 522 6789 9999</p>
           </div>
         </div>
 
@@ -146,7 +146,7 @@ export default function OrderSuccess() {
               <div className="flex items-center gap-4">
                 <img src={item.image} alt={item.title} className="w-16 h-16 rounded-lg object-cover shadow-sm" />
                 <div className="text-left">
-                  <h3 className="font-bold text-gray-700">{item.title}</h3>
+                  <h3 className="font-bold text-gray-700">{item.title} {item.comment && `(${item.comment})`}</h3>
                   <p className="text-sm text-gray-500">
                     {Number(item.price).toLocaleString()}đ x {item.quantity}
                   </p>
