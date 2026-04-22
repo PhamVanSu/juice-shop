@@ -132,9 +132,9 @@ export default function OrderSuccess() {
             <h2 className="text-lg font-bold text-gray-700 mb-4">Quét mã QR thanh toán</h2>
             <div className="bg-gray-100 w-40 h-40 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
                 {/* Thay src bằng link API QR thực tế nếu cần */}
-                <img src="/images/qr-code.png" alt="QR Code" className="w-full h-full object-cover" />
+                <img src="/images/qr.jpeg" alt="QR Code" className="w-full h-full object-cover" />
             </div>
-            <p className="text-xs text-gray-500 mt-2 italic">TP Bank: 522 6789 9999</p>
+            <p className="text-xs text-gray-500 mt-2 italic">NGUYEN PHUONG THAO <br/>BIDV - PGD Tuệ Tĩnh: 1990628358 </p>
           </div>
         </div>
 

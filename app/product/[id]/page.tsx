@@ -6,6 +6,7 @@ import { db } from "@/lib/firebase";
 import { useEffect, useState } from "react";
 import { useCart } from "@/app/api/useCart";
 import RelatedProducts from "@/app/component/RelatedProducts";
+import { Toaster, toast } from "react-hot-toast";
 
 export default function ProductDetail() {
   const router = useRouter();
@@ -19,8 +20,7 @@ export default function ProductDetail() {
   const handleAddToCart = () => {
     if (product) {
       addToCart(product);
-      // Hiệu ứng thông báo đơn giản (có thể thay bằng Toast)
-      alert(`Đã thêm ${product.title} vào giỏ hàng! 🥤`);
+      toast.success(`Đã thêm ${product.title} vào giỏ hàng! 🥤`);
     }
   };
 
@@ -147,6 +147,7 @@ export default function ProductDetail() {
         ))}
       </div>
       <RelatedProducts currentProductId={id}/>
+      <Toaster />
     </div>
   );
 }

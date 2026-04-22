@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useCart } from "../api/useCart";
+import { Toaster, toast } from "react-hot-toast";
 
 export default function CartPage() {
   const router = useRouter();
@@ -56,7 +57,7 @@ export default function CartPage() {
           price: Number(item.price) || 0,
           quantity: Number(item.quantity) || 1,
           image: item.image || "",
-          comment: item.comment || "" // Lưu ghi chú vào Firestore
+          comment: item.comment || ""
         })),
         totalAmount: total || 0,
         status: "pending",
@@ -68,7 +69,7 @@ export default function CartPage() {
       router.push(`/order/${docRef.id}`);
       
     } catch (error) {
-      alert("Có lỗi xảy ra khi lưu đơn hàng.");
+      toast.error("Có lỗi xảy ra khi lưu đơn hàng.");
     } finally {
       setIsSubmitting(false);
     }
@@ -175,6 +176,7 @@ export default function CartPage() {
           </div>
         )}
       </div>
+      <Toaster />
     </div>
   );
 }

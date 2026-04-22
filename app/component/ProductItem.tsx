@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "../api/useCart";
+import { Toaster, toast } from "react-hot-toast";
 
 interface ProductCardProps {
   id: string;
@@ -19,7 +20,8 @@ export default function ProductCard({ id, title, price, image }: ProductCardProp
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault(); // Ngăn sự kiện nổi bọt nếu bọc trong Link (nếu có)
     addToCart({ id, title, price, image });
-    alert(`Đã thêm ${title} vào giỏ hàng!`);
+    toast.success(`Đã thêm ${title} vào giỏ hàng! 🥤`);
+    // alert(`Đã thêm ${title} vào giỏ hàng!`);
   };
 
   // Logic cho nút Mua ngay
@@ -45,25 +47,24 @@ export default function ProductCard({ id, title, price, image }: ProductCardProp
 
       <div className="mt-4 flex gap-3">
       {/* Nút Mua ngay */}
-  <button
-    onClick={handleBuyNow}
-    className="flex-1 bg-orange-500 text-white py-2 rounded-lg font-bold 
-               hover:bg-orange-600 transition active:scale-95 shadow-sm"
-  >
-    Mua ngay
-  </button>
+      <button
+        onClick={handleBuyNow}
+        className="flex-1 bg-orange-500 text-white py-2 rounded-lg font-bold 
+                  hover:bg-orange-600 transition active:scale-95 shadow-sm"
+      >
+        Mua ngay
+      </button>
 
-  {/* Nút Thêm vào giỏ */}
-  <button
-    onClick={handleAddToCart}
-    className="flex-1 bg-green-600 text-white py-2 rounded-lg font-medium 
-               hover:bg-green-700 transition active:scale-95 shadow-sm"
-  >
-    Thêm vào giỏ
-  </button>
-
-
-</div>
+      {/* Nút Thêm vào giỏ */}
+      <button
+        onClick={handleAddToCart}
+        className="flex-1 bg-green-600 text-white py-2 rounded-lg font-medium 
+                  hover:bg-green-700 transition active:scale-95 shadow-sm"
+      >
+        Thêm vào giỏ
+      </button>
     </div>
+    <Toaster />
+  </div>
   );
 }
