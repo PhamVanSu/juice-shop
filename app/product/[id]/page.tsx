@@ -12,8 +12,9 @@ export default function ProductDetail() {
   const router = useRouter();
   const params = useParams();
   const id = params?.id as string;
-  const [product, setProduct] = useState<any>(null);
+  const [product, setProduct] = useState<any>({});
   const [loading, setLoading] = useState(true);
+  const benefits: any[] = product.benefits;
 
   const addToCart = useCart((state) => state.addToCart);
 
@@ -133,16 +134,12 @@ export default function ProductDetail() {
 
       {/* Benefits */}
       <div className="max-w-6xl mx-auto mt-16 grid md:grid-cols-3 gap-8">
-        {[
-          { title: "Tăng cường miễn dịch", desc: "Giàu Vitamin C giúp cơ thể chống lại bệnh tật.", color: "text-green-500", icon: "💪" },
-          { title: "Làm đẹp da", desc: "Chống oxy hóa, giúp da sáng khỏe và mịn màng.", color: "text-orange-500", icon: "✨" },
-          { title: "Bổ sung năng lượng", desc: "Giúp bạn tràn đầy sức sống mỗi ngày.", color: "text-pink-500", icon: "⚡" },
-        ].map((benefit, idx) => (
+        {Array.isArray(benefits) && benefits.map((benefit, idx) => (
           <div key={idx} className="bg-white rounded-2xl shadow-lg p-8 text-center hover:shadow-2xl transition transform hover:-translate-y-2 border-b-4 border-transparent hover:border-orange-400">
             <h3 className={`text-xl font-bold ${benefit.color} mb-3`}>
               {benefit.icon} {benefit.title}
             </h3>
-            <p className="text-gray-700">{benefit.desc}</p>
+            <p className="text-gray-700">{benefit.content}</p>
           </div>
         ))}
       </div>
