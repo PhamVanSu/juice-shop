@@ -73,7 +73,16 @@ export default function AboutContact() {
             <div className="space-y-6">
               <div>
                 <p className="text-sm text-gray-400">Facebook</p>
-                <p className="font-medium">https://www.facebook.com/nguyen.phuong.thao.280426</p>
+                <p className="font-medium">
+                  <a
+                    href="https://www.facebook.com/nguyen.phuong.thao.280426"
+                    className="font-medium text-blue-600 hover:underline transition-colors"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Nguyễn Phương Thảo
+                  </a>
+                </p>
               </div>
               <div>
                 <p className="text-sm text-gray-400">Hotline</p>
