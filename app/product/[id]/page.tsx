@@ -111,9 +111,28 @@ export default function ProductDetail() {
           </p>
 
           <div className="mb-8 p-4 bg-orange-50 rounded-2xl border border-orange-100">
-             <p className="text-sm text-gray-500 uppercase tracking-widest mb-1 font-semibold">Giá bán</p>
              <p className="text-4xl font-black text-orange-500">
-               {Number(product.price).toLocaleString("vi-VN")}đ
+               <div className="flex items-center justify-between border-t border-gray-50">
+                <div className="flex flex-col">
+                  <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
+                    Giá bán
+                  </span>
+                  <span className="text-2xl font-bold text-green-600 mt-1">
+                    {Number(product.price).toLocaleString("vi-VN")}đ
+                  </span>
+                </div>
+
+                <div className="h-8 w-[1px] bg-gray-200"></div>
+
+                <div className="flex flex-col items-end">
+                  <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
+                    Khối lượng
+                  </span>
+                  <span className="text-sm font-bold text-pink-600 mt-1 bg-pink-50 px-3 py-1 rounded-full">
+                    700ml
+                  </span>
+                </div>
+              </div>
              </p>
           </div>
 

@@ -40,9 +40,27 @@ export default function ProductCard({ id, title, price, image }: ProductCardProp
           alt={title}
         />
         <h3 className="mt-3 font-semibold text-lg text-orange-400">{title}</h3>
-        <p className="text-green-600 font-bold">
-          {Number(price).toLocaleString("vi-VN")}đ
-        </p>
+        <div className="flex items-center justify-between border-t border-gray-50">
+          <div className="flex flex-col">
+            <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
+              Giá bán
+            </span>
+            <span className="text-2xl font-bold text-green-600 mt-1">
+              {Number(price).toLocaleString("vi-VN")}đ
+            </span>
+          </div>
+
+          <div className="h-8 w-[1px] bg-gray-200"></div>
+
+          <div className="flex flex-col items-end">
+            <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
+              Khối lượng
+            </span>
+            <span className="text-sm font-bold text-pink-600 mt-1 bg-pink-50 px-3 py-1 rounded-full">
+              700ml
+            </span>
+          </div>
+        </div>
       </Link>
 
       <div className="mt-4 flex gap-3">
