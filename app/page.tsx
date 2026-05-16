@@ -53,9 +53,9 @@ export default async function Home() {
       {/* BANNER */}
       <section className="bg-orange-400 text-white text-center py-10 px-6">
         <h2 className="text-2xl md:text-3xl font-bold">
-          🎉 Giảm 20% cho đơn hàng đầu tiên!
+          🎉 Giảm ngay 15% cho các đơn hàng ngày khai trương 18/05/2026!
         </h2>
-        <p className="mt-2">Nhanh tay đặt hàng ngay hôm nay</p>
+        <p className="mt-2">Nhanh tay đặt hàng ngay để nhận được ưu đãi</p>
       </section>
     </>
   );

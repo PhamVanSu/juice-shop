@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { 
+  collection, doc, runTransaction, serverTimestamp 
+} from "firebase/firestore";
 import { useCart } from "../api/useCart";
 import { Toaster, toast } from "react-hot-toast";
 
@@ -16,7 +18,7 @@ export default function CartPage() {
   const cart = useCart((state) => state.cart);
   const removeFromCart = useCart((state) => state.removeFromCart);
   const updateQuantity = useCart((state) => state.updateQuantity);
-  const updateComment = useCart((state: any) => state.updateComment); // Lấy hàm updateComment
+  const updateComment = useCart((state: any) => state.updateComment);
   const clearCart = useCart((state) => state.clearCart);
   
   const total = cart.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0);
@@ -30,6 +32,11 @@ export default function CartPage() {
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // Hàm helper để định dạng số thứ tự (ví dụ: 5 -> "HD0005")
+  const formatOrderCode = (num: number) => {
+    return `HD${String(num).padStart(4, "0")}`;
+  };
 
   const handleOrder = async () => {
     if (!customerInfo.name || !customerInfo.phone || !customerInfo.address) {
@@ -45,30 +52,59 @@ export default function CartPage() {
     setIsSubmitting(true);
 
     try {
-      const orderData = {
-        customer: {
-          name: customerInfo.name || "",
-          phone: customerInfo.phone || "",
-          address: customerInfo.address || "",
-        },
-        items: cart.map(item => ({
-          productId: item.id || item.cartId || "no-id", 
-          title: item.title || "Sản phẩm không tên",
-          price: Number(item.price) || 0,
-          quantity: Number(item.quantity) || 1,
-          image: item.image || "",
-          comment: item.comment || ""
-        })),
-        totalAmount: total || 0,
-        status: "pending",
-        createdAt: serverTimestamp(),
-      };
+      // Sử dụng runTransaction để đảm bảo mã đơn hàng tăng dần không trùng lặp
+      const newOrderId = await runTransaction(db, async (transaction) => {
+        const counterRef = doc(db, "counters", "orders");
+        const counterSnap = await transaction.get(counterRef);
 
-      const docRef = await addDoc(collection(db, "orders"), orderData);
+        let nextId = 1;
+        if (counterSnap.exists()) {
+          nextId = counterSnap.data().currentId + 1;
+        }
+
+        // Cập nhật bộ đếm mới vào Firestore
+        transaction.set(counterRef, { currentId: nextId }, { merge: true });
+
+        // Tạo mã hóa đơn dạng chuỗi ký tự (VD: HD0001)
+        const orderCode = formatOrderCode(nextId);
+
+        // Chuẩn bị dữ liệu đơn hàng
+        const orderData = {
+          orderCode: orderCode, // Mã đơn hàng tăng dần tự động
+          customer: {
+            name: customerInfo.name || "",
+            phone: customerInfo.phone || "",
+            address: customerInfo.address || "",
+          },
+          items: cart.map(item => ({
+            productId: item.id || item.cartId || "no-id", 
+            title: item.title || "Sản phẩm không tên",
+            price: Number(item.price) || 0,
+            quantity: Number(item.quantity) || 1,
+            image: item.image || "",
+            comment: item.comment || ""
+          })),
+          totalAmount: total || 0,
+          status: "pending",
+          createdAt: serverTimestamp(),
+        };
+
+        // Tạo một document reference mới với ID ngẫu nhiên trong collection "orders"
+        const newOrderRef = doc(collection(db, "orders"));
+        
+        // Ghi toàn bộ dữ liệu đơn hàng vào transaction
+        transaction.set(newOrderRef, orderData);
+
+        // Trả về ID của document để chuyển trang
+        return newOrderRef.id;
+      });
+
       clearCart();
-      router.push(`/order/${docRef.id}`);
+      toast.success("Đặt hàng thành công!");
+      router.push(`/order/${newOrderId}`);
       
     } catch (error) {
+      console.error("Lỗi đặt hàng:", error);
       toast.error("Có lỗi xảy ra khi lưu đơn hàng.");
     } finally {
       setIsSubmitting(false);

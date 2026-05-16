@@ -24,7 +24,8 @@ export default function AdminProducts() {
   const [formData, setFormData] = useState({
     title: "", name: "", name_en: "", sub_title: "", 
     price: "", image: "", description: "", 
-    ingredient: "", type: "single" 
+    ingredient: "", type: "single",
+    isVisible: true // Thêm trường ẩn hiện mặc định là true
   });
   
   // State riêng cho mảng Benefits
@@ -100,6 +101,21 @@ export default function AdminProducts() {
     setBenefits(benefits.filter((_, i) => i !== index));
   };
 
+  // --- Thay đổi trạng thái ẩn hiện nhanh ngoài danh sách ---
+  const toggleVisibility = async (id: string, currentStatus: boolean) => {
+    try {
+      await updateDoc(doc(db, "products", id), {
+        isVisible: !currentStatus,
+        updatedAt: serverTimestamp(),
+      });
+      // Cập nhật lại state cục bộ để giao diện đổi mượt mà không cần fetch lại toàn bộ dữ liệu
+      setProducts(products.map(p => p.id === id ? { ...p, isVisible: !currentStatus } : p));
+    } catch (error) {
+      console.error(error);
+      alert("Lỗi khi cập nhật trạng thái hiển thị!");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -153,6 +169,7 @@ export default function AdminProducts() {
       description: product.description || "",
       ingredient: product.ingredient || "",
       type: product.type || "single",
+      isVisible: product.isVisible !== undefined ? product.isVisible : true, // Nếu chưa có thì mặc định true
     });
     setIsModalOpen(true);
   };
@@ -164,7 +181,7 @@ export default function AdminProducts() {
     setFormData({ 
       title: "", name: "", name_en: "", sub_title: "", 
       price: "", image: "", description: "", 
-      ingredient: "", type: "single" 
+      ingredient: "", type: "single", isVisible: true 
     });
   };
 
@@ -182,6 +199,7 @@ export default function AdminProducts() {
               <option value="all">Tất cả loại</option>
               <option value="single">Single</option>
               <option value="mix">Mix</option>
+              <option value="other">Other</option>
             </select>
             <button onClick={() => setIsModalOpen(true)} className="bg-orange-500 text-white px-6 py-2 rounded-lg font-bold hover:bg-orange-600 transition">
               + Thêm món
@@ -198,12 +216,13 @@ export default function AdminProducts() {
                 <th className="p-4">Tên sản phẩm</th>
                 <th className="p-4">Giá</th>
                 <th className="p-4">Loại</th>
+                <th className="p-4 text-center">Hiển thị</th>
                 <th className="p-4 text-center">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan={5} className="p-10 text-center">Đang tải...</td></tr>
+                <tr><td colSpan={6} className="p-10 text-center">Đang tải...</td></tr>
               ) : (
                 products.map((product) => (
                   <tr key={product.id} className="hover:bg-orange-50/30">
@@ -214,6 +233,19 @@ export default function AdminProducts() {
                     </td>
                     <td className="p-4 text-green-600 font-bold">{product.price?.toLocaleString()}đ</td>
                     <td className="p-4"><span className="text-xs font-bold uppercase">{product.type}</span></td>
+                    {/* Cột Ẩn hiện nhanh ngoài danh sách */}
+                    <td className="p-4 text-center">
+                      <button 
+                        onClick={() => toggleVisibility(product.id, product.isVisible !== false)}
+                        className={`px-3 py-1 text-xs font-bold rounded-full border transition ${
+                          product.isVisible !== false 
+                            ? 'bg-green-50 border-green-200 text-green-600 hover:bg-green-100' 
+                            : 'bg-gray-100 border-gray-200 text-gray-400 hover:bg-gray-200'
+                        }`}
+                      >
+                        {product.isVisible !== false ? 'Đang hiện' : 'Đang ẩn'}
+                      </button>
+                    </td>
                     <td className="p-4">
                       <div className="flex justify-center gap-4">
                         <button onClick={() => openEdit(product)} className="text-blue-500 hover:font-bold">Sửa</button>
@@ -282,6 +314,7 @@ export default function AdminProducts() {
                         <select className="admin-input" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
                           <option value="single">Single</option>
                           <option value="mix">Mix</option>
+                          <option value="other">Other</option>
                         </select>
                       </label>
                     </div>
@@ -295,10 +328,28 @@ export default function AdminProducts() {
                     <label className="block text-sm font-bold text-gray-600">Tiêu đề phụ
                       <input type="text" className="admin-input" value={formData.sub_title} onChange={(e) => setFormData({...formData, sub_title: e.target.value})} />
                     </label>
-                    <label className="block text-sm font-bold text-gray-600">Mô tả tóm tắt
-                      <textarea rows={2} className="admin-input" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
-                    </label>
+                    
+                    {/* Thêm phần cấu hình trạng thái ẩn hiện bằng Checkbox trong Form */}
+                    <div className="flex items-center gap-2 pt-2">
+                      <input 
+                        type="checkbox" 
+                        id="isVisible"
+                        className="w-4 h-4 accent-orange-500 rounded"
+                        checked={formData.isVisible} 
+                        onChange={(e) => setFormData({...formData, isVisible: e.target.checked})} 
+                      />
+                      <label htmlFor="isVisible" className="text-sm font-bold text-gray-700 cursor-pointer">
+                        Hiển thị sản phẩm này trên cửa hàng
+                      </label>
+                    </div>
                   </div>
+                </div>
+
+                {/* Mô tả tóm tắt (Đưa xuống dưới do thêm trường ẩn hiện ở cột phải) */}
+                <div className="w-full">
+                  <label className="block text-sm font-bold text-gray-600">Mô tả tóm tắt
+                    <textarea rows={2} className="admin-input" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
+                  </label>
                 </div>
 
                 {/* PHẦN QUẢN LÝ BENEFITS (Thay thế Nutrition) */}

@@ -5,6 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+const STATUS_OPTIONS = [
+  { value: "pending", label: "Chờ xử lý", color: "bg-yellow-100 text-yellow-700" },
+  { value: "processing", label: "Đang làm", color: "bg-blue-100 text-blue-700" },
+  { value: "done", label: "Hoàn tất", color: "bg-green-100 text-green-700" },
+  { value: "cancelled", label: "Đã hủy", color: "bg-red-100 text-red-700" },
+];
+
 export default function OrderSuccess() {
   const router = useRouter();
   const params = useParams();
@@ -104,7 +111,8 @@ export default function OrderSuccess() {
     alert("Huỷ đơn thất bại");
   }
 };
-
+const currentStatus = STATUS_OPTIONS.find((opt) => opt.value === order.status);
+const isPaid = order.isPaid === true; 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-yellow-100 py-16 px-6">
       <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl p-10 text-center">
@@ -119,11 +127,12 @@ export default function OrderSuccess() {
           <div className="text-left bg-orange-50 p-6 rounded-2xl border border-orange-100">
             <h2 className="text-xl font-bold text-orange-600 mb-4 border-b border-orange-200 pb-2">📦 Chi tiết đơn hàng</h2>
             <div className="space-y-2 text-gray-700">
-              <p><strong>Mã đơn:</strong> <span className="text-sm font-mono">{order.id}</span></p>
+              <p><strong>Mã đơn:</strong> <span className="text-sm font-mono">{order.orderCode}</span></p>
               <p><strong>Khách hàng:</strong> {order.customer?.name}</p>
               <p><strong>SĐT:</strong> {order.customer?.phone}</p>
               <p><strong>Địa chỉ:</strong> {order.customer?.address}</p>
-              <p><strong>Trạng thái:</strong> <span className="bg-yellow-200 text-yellow-800 px-2 py-1 rounded text-xs uppercase font-bold">{order.status}</span></p>
+              <p><strong>Trạng thái:</strong> <span className="bg-yellow-200 text-yellow-800 px-2 py-1 rounded text-xs uppercase font-bold">{currentStatus?.label}</span></p>
+              <p><strong>Thanh toán:</strong> {isPaid ? "✅ Đã trả tiền" : "❌ Chưa trả"}</p>
             </div>
           </div>
 

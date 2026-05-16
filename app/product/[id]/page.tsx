@@ -111,7 +111,7 @@ export default function ProductDetail() {
           </p>
 
           <div className="mb-8 p-4 bg-orange-50 rounded-2xl border border-orange-100">
-             <p className="text-4xl font-black text-orange-500">
+             <div className="text-4xl font-black text-orange-500">
                <div className="flex items-center justify-between border-t border-gray-50">
                 <div className="flex flex-col">
                   <span className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
@@ -133,7 +133,7 @@ export default function ProductDetail() {
                   </span>
                 </div>
               </div>
-             </p>
+             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4">
