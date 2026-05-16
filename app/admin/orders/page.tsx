@@ -123,10 +123,20 @@ export default function AdminOrders() {
                         {/* Thời gian */}
                         <td className="p-4 whitespace-nowrap">
                           <div className="font-bold text-gray-700">
-                            {order.createdAt?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {order.createdAt?.toDate().toLocaleString("vi-VN", {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                              hour12: false 
+                            })}
+                            {order.createdAt?.toDate().toLocaleString("vi-VN", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: false 
+                            })}
                           </div>
-                          <div className="text-[10px] text-gray-400 uppercase mt-1">
-                            #{order.id.slice(-6)}
+                          <div className="text-[15px] text-red-600 uppercase mt-1">
+                            #{order.orderCode}
                           </div>
                         </td>
 

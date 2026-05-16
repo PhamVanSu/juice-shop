@@ -93,7 +93,7 @@ export default async function Products() {
           <div className="absolute inset-0 bg-gradient-to-br from-pink-100/90 to-orange-100/80"></div>
           <div className="relative p-6">
             <h2 className="bg-pink-400 text-white px-6 py-2 rounded-full inline-block mb-4 shadow-lg">
-              Nước ép khác
+              Nước uống khác
             </h2>
             {otherProducts.map(({name, image, id, price, name_en}) => (
               <div key={id} className="flex items-center justify-between border-b border-dashed border-orange-300 pb-3">

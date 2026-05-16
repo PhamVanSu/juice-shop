@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const STATUS_OPTIONS = [
@@ -15,7 +15,7 @@ const STATUS_OPTIONS = [
 export default function OrderSuccess() {
   const router = useRouter();
   const params = useParams();
-  const orderId = params?.id as string; // Lấy ID từ URL (ví dụ: /order-success/[id])
+  const orderId = params?.id as string; 
 
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -24,41 +24,47 @@ export default function OrderSuccess() {
   useEffect(() => {
     if (!orderId) return;
 
-    const fetchOrder = async () => {
-  try {
     setLoading(true);
-    setError(""); // Reset lỗi mỗi lần fetch mới
-    
+    setError(""); 
+
     const docRef = doc(db, "orders", orderId);
-    const docSnap = await getDoc(docRef);
 
-    if (docSnap.exists()) {
-      const data = docSnap.data();
+    // Sử dụng onSnapshot để tự động đồng bộ dữ liệu khi có thay đổi từ phía admin/hệ thống khác
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+      try {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
 
-      // Kiểm tra điều kiện status khác "cancelled"
-      if (data.status !== "cancelled") {
-        setOrder({ id: docSnap.id, ...data });
-      } else {
-        // Cập nhật thông báo lỗi khi đơn hàng bị hủy
-        setError("Đơn hàng này đã bị hủy. Vui lòng liên hệ hỗ trợ để biết thêm chi tiết.");
-        setOrder(null);
+          // Kiểm tra nếu đơn hàng bị hủy
+          if (data.status === "cancelled") {
+            setError("Đơn hàng này đã bị hủy. Vui lòng liên hệ hỗ trợ để biết thêm chi tiết.");
+            setOrder(null);
+          } else {
+            // Đơn hàng hợp lệ, cập nhật vào state và xóa bỏ thông báo lỗi cũ nếu có
+            setOrder({ id: docSnap.id, ...data });
+            setError("");
+          }
+        } else {
+          setError("Mã đơn hàng không tồn tại trên hệ thống.");
+          setOrder(null);
+        }
+      } catch (err) {
+        console.error("Lỗi xử lý dữ liệu:", err);
+        setError("Đã có lỗi xảy ra khi tải dữ liệu.");
+      } finally {
+        setLoading(false);
       }
-    } else {
-      // Cập nhật thông báo lỗi khi không tìm thấy ID
-      setError("Mã đơn hàng không tồn tại trên hệ thống.");
-      setOrder(null);
-    }
-  } catch (err) {
-    console.error("Lỗi hệ thống:", err);
-    setError("Đã có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại sau.");
-  } finally {
-    setLoading(false);
-  }
-};
+    }, (err) => {
+      console.error("Lỗi lắng nghe Firestore:", err);
+      setError("Mất kết nối với máy chủ. Vui lòng thử lại.");
+      setLoading(false);
+    });
 
-    fetchOrder();
+    // Huỷ lắng nghe khi Component bị unmount để tránh rò rỉ bộ nhớ (Memory Leak)
+    return () => unsubscribe();
   }, [orderId]);
 
+  // LÊN ƯU TIÊN 1: Đang tải dữ liệu
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-green-50">
@@ -68,6 +74,26 @@ export default function OrderSuccess() {
     );
   }
 
+  // LÊN ƯU TIÊN 2: Hiển thị giao diện báo lỗi (Hủy đơn / Không tồn tại mã)
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-green-50">
+        <div className="bg-white border border-red-200 p-8 rounded-2xl shadow-sm max-w-md w-full">
+          <span className="text-5xl mb-4 block">⚠️</span>
+          <h2 className="text-2xl font-bold text-red-600 mb-2">Rất tiếc!</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button 
+            onClick={() => router.push("/")}
+            className="w-full bg-orange-500 text-white px-8 py-3 rounded-full font-bold hover:bg-orange-600 transition"
+          >
+            Quay lại trang chủ
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // LÊN ƯU TIÊN 3: Phòng hờ trường hợp không có lỗi nhưng dữ liệu bị null rỗng
   if (!order) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-green-50">
@@ -79,40 +105,23 @@ export default function OrderSuccess() {
     );
   }
 
-  if (error) {
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
-      <div className="bg-red-50 border border-red-200 p-8 rounded-2xl shadow-sm">
-        <span className="text-5xl mb-4 block">⚠️</span>
-        <h2 className="text-2xl font-bold text-red-600 mb-2">Rất tiếc!</h2>
-        <p className="text-gray-600 mb-6">{error}</p>
-        <button 
-          onClick={() => router.push("/")}
-          className="bg-orange-500 text-white px-8 py-3 rounded-full font-bold hover:bg-orange-600 transition"
-        >
-          Quay lại trang chủ
-        </button>
-      </div>
-    </div>
-  );
-}
-
   const handleCancelOrder = async () => {
-  try {
-    await updateDoc(doc(db, "orders", orderId), {
-      status: "cancelled",
-      cancelledAt: new Date(),
-    });
+    try {
+      await updateDoc(doc(db, "orders", orderId), {
+        status: "cancelled",
+        cancelledAt: new Date(),
+      });
+      alert("Bạn đã huỷ đơn hàng thành công");
+      router.push("/");
+    } catch (error) {
+      console.error(error);
+      alert("Huỷ đơn thất bại");
+    }
+  };
 
-    alert("Bạn đã huỷ đơn hàng");
-    router.push("/")
-  } catch (error) {
-    console.error(error);
-    alert("Huỷ đơn thất bại");
-  }
-};
-const currentStatus = STATUS_OPTIONS.find((opt) => opt.value === order.status);
-const isPaid = order.isPaid === true; 
+  const currentStatus = STATUS_OPTIONS.find((opt) => opt.value === order.status);
+  const isPaid = order.isPaid === true; 
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-yellow-100 py-16 px-6">
       <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl p-10 text-center">
@@ -140,7 +149,6 @@ const isPaid = order.isPaid === true;
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center">
             <h2 className="text-lg font-bold text-gray-700 mb-4">Quét mã QR thanh toán</h2>
             <div className="bg-gray-100 w-40 h-40 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-                {/* Thay src bằng link API QR thực tế nếu cần */}
                 <img src="/images/qr.jpeg" alt="QR Code" className="w-full h-full object-cover" />
             </div>
             <p className="text-xs text-gray-500 mt-2 italic">NGUYEN PHUONG THAO <br/>BIDV - PGD Tuệ Tĩnh: 1990628358 </p>
