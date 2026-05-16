@@ -25,13 +25,11 @@ export default function AdminProducts() {
     title: "", name: "", name_en: "", sub_title: "", 
     price: "", image: "", description: "", 
     ingredient: "", type: "single",
-    isVisible: true // Thêm trường ẩn hiện mặc định là true
+    isVisible: true 
   });
   
-  // State riêng cho mảng Benefits
   const [benefits, setBenefits] = useState<any[]>([]);
 
-  // 1. Lấy tổng số lượng để tính số trang
   const fetchTotalCount = async () => {
     const coll = collection(db, "products");
     const q = filterType === "all" ? coll : query(coll, where("type", "==", filterType));
@@ -39,7 +37,6 @@ export default function AdminProducts() {
     setTotalCount(snapshot.data().count);
   };
 
-  // 2. Lấy dữ liệu sản phẩm
   const fetchProducts = async (isNextPage = false) => {
     setLoading(true);
     try {
@@ -86,7 +83,6 @@ export default function AdminProducts() {
     }
   };
 
-  // --- Xử lý Thêm/Sửa Benefits ---
   const addBenefitField = () => {
     setBenefits([...benefits, { icon: "✨", title: "", content: "", color: "text-green-500" }]);
   };
@@ -101,14 +97,12 @@ export default function AdminProducts() {
     setBenefits(benefits.filter((_, i) => i !== index));
   };
 
-  // --- Thay đổi trạng thái ẩn hiện nhanh ngoài danh sách ---
   const toggleVisibility = async (id: string, currentStatus: boolean) => {
     try {
       await updateDoc(doc(db, "products", id), {
         isVisible: !currentStatus,
         updatedAt: serverTimestamp(),
       });
-      // Cập nhật lại state cục bộ để giao diện đổi mượt mà không cần fetch lại toàn bộ dữ liệu
       setProducts(products.map(p => p.id === id ? { ...p, isVisible: !currentStatus } : p));
     } catch (error) {
       console.error(error);
@@ -121,7 +115,7 @@ export default function AdminProducts() {
     try {
       const dataToSave = {
         ...formData,
-        benefits: benefits, // Lưu mảng benefits mới
+        benefits: benefits,
         price: Number(formData.price),
         updatedAt: serverTimestamp(),
       };
@@ -169,7 +163,7 @@ export default function AdminProducts() {
       description: product.description || "",
       ingredient: product.ingredient || "",
       type: product.type || "single",
-      isVisible: product.isVisible !== undefined ? product.isVisible : true, // Nếu chưa có thì mặc định true
+      isVisible: product.isVisible !== undefined ? product.isVisible : true,
     });
     setIsModalOpen(true);
   };
@@ -186,13 +180,15 @@ export default function AdminProducts() {
   };
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen">
+    <div className="p-3 sm:p-8 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <h1 className="text-3xl font-bold text-gray-800">Quản lý Sản phẩm</h1>
-          <div className="flex items-center gap-4">
+        
+        {/* Header & Tiện ích lọc */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 md:mb-8 gap-4">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Quản lý Sản phẩm</h1>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
             <select 
-              className="p-2 border rounded-lg bg-white"
+              className="flex-1 sm:flex-none p-2.5 border rounded-lg bg-white text-sm outline-none shadow-sm"
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
             >
@@ -201,14 +197,61 @@ export default function AdminProducts() {
               <option value="mix">Mix</option>
               <option value="other">Other</option>
             </select>
-            <button onClick={() => setIsModalOpen(true)} className="bg-orange-500 text-white px-6 py-2 rounded-lg font-bold hover:bg-orange-600 transition">
+            <button 
+              onClick={() => setIsModalOpen(true)} 
+              className="flex-1 sm:flex-none bg-orange-500 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-orange-600 transition text-sm text-center shadow-md"
+            >
               + Thêm món
             </button>
           </div>
         </div>
 
-        {/* Bảng danh sách */}
-        <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+        {/* ================= DANH SÁCH DẠNG THẺ (CARD VIEW) - CHỈ HIỆN TRÊN MOBILE ================= */}
+        <div className="grid grid-cols-1 gap-4 md:hidden">
+          {loading ? (
+            <div className="p-10 text-center text-gray-400 bg-white rounded-xl border">Đang tải...</div>
+          ) : products.length === 0 ? (
+            <div className="p-10 text-center text-gray-400 bg-white rounded-xl border">Chưa có sản phẩm nào.</div>
+          ) : (
+            products.map((product) => (
+              <div key={product.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <img src={product.image} className="w-14 h-14 object-cover rounded-lg border bg-gray-50" alt="" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-gray-800 truncate text-base">{product.title}</div>
+                    <div className="text-xs text-gray-400 truncate mt-0.5">{product.name_en || "Chưa có tên EN"}</div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-green-600 font-bold text-sm">{product.price?.toLocaleString()}đ</span>
+                      <span className="text-[10px] font-black bg-gray-100 px-2 py-0.5 rounded text-gray-500 uppercase">{product.type}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Thanh điều khiển dưới đáy card mobile */}
+                <div className="flex justify-between items-center pt-2 border-t border-gray-100 mt-1">
+                  <button 
+                    onClick={() => toggleVisibility(product.id, product.isVisible !== false)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition ${
+                      product.isVisible !== false 
+                        ? 'bg-green-50 border-green-200 text-green-600' 
+                        : 'bg-gray-100 border-gray-200 text-gray-400'
+                    }`}
+                  >
+                    {product.isVisible !== false ? '🟢 Đang hiện' : '⚫ Đang ẩn'}
+                  </button>
+
+                  <div className="flex gap-4 text-sm font-semibold">
+                    <button onClick={() => openEdit(product)} className="text-blue-500 active:text-blue-700">Sửa</button>
+                    <button onClick={() => handleDelete(product.id)} className="text-red-500 active:text-red-700">Xóa</button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* ================= DANH SÁCH DẠNG BẢNG (TABLE VIEW) - CHỈ HIỆN TRÊN DESKTOP ================= */}
+        <div className="hidden md:block bg-white rounded-2xl shadow-sm border overflow-hidden">
           <table className="w-full text-left">
             <thead className="bg-gray-50 text-gray-500 text-xs font-bold uppercase">
               <tr>
@@ -233,7 +276,6 @@ export default function AdminProducts() {
                     </td>
                     <td className="p-4 text-green-600 font-bold">{product.price?.toLocaleString()}đ</td>
                     <td className="p-4"><span className="text-xs font-bold uppercase">{product.type}</span></td>
-                    {/* Cột Ẩn hiện nhanh ngoài danh sách */}
                     <td className="p-4 text-center">
                       <button 
                         onClick={() => toggleVisibility(product.id, product.isVisible !== false)}
@@ -257,61 +299,66 @@ export default function AdminProducts() {
               )}
             </tbody>
           </table>
+        </div>
 
-          {/* THANH PHÂN TRANG */}
-          <div className="p-4 bg-gray-50 border-t flex justify-between items-center">
-            <span className="text-sm text-gray-500">
-              Hiển thị {products.length} / {totalCount} sản phẩm
+        {/* THANH PHÂN TRANG (Tối ưu responsive tràn dòng) */}
+        <div className="mt-4 p-4 bg-white md:bg-gray-50 border rounded-xl md:rounded-none md:border-none md:border-t flex flex-col sm:flex-row gap-3 justify-between items-center shadow-sm">
+          <span className="text-xs md:text-sm text-gray-500">
+            Hiển thị {products.length} / {totalCount} sản phẩm
+          </span>
+          <div className="flex gap-2 w-full sm:w-auto justify-center">
+            <button 
+              disabled={page === 1 || loading}
+              onClick={() => handlePageChange(false)}
+              className="flex-1 sm:flex-none px-4 py-1.5 text-xs md:text-sm border rounded bg-white disabled:opacity-50 hover:bg-gray-100 transition font-medium"
+            >
+              Trang đầu
+            </button>
+            <span className="px-4 py-1.5 text-xs md:text-sm font-bold text-orange-600 bg-orange-50 rounded border border-orange-100">
+              Trang {page}
             </span>
-            <div className="flex gap-2">
-              <button 
-                disabled={page === 1 || loading}
-                onClick={() => handlePageChange(false)}
-                className="px-4 py-1 border rounded bg-white disabled:opacity-50 hover:bg-gray-100 transition"
-              >
-                Trang đầu
-              </button>
-              <span className="px-4 py-1 font-bold text-orange-600">Trang {page}</span>
-              <button 
-                disabled={products.length < pageSize || loading}
-                onClick={() => handlePageChange(true)}
-                className="px-4 py-1 border rounded bg-white disabled:opacity-50 hover:bg-gray-100 transition"
-              >
-                Tiếp theo
-              </button>
-            </div>
+            <button 
+              disabled={products.length < pageSize || loading}
+              onClick={() => handlePageChange(true)}
+              className="flex-1 sm:flex-none px-4 py-1.5 text-xs md:text-sm border rounded bg-white disabled:opacity-50 hover:bg-gray-100 transition font-medium"
+            >
+              Tiếp theo
+            </button>
           </div>
         </div>
 
-        {/* Modal Form */}
+        {/* ================= MODAL FORM CHỈNH SỬA / THÊM MÓN ================= */}
         {isModalOpen && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-            <div className="bg-white rounded-3xl p-8 max-w-4xl w-full shadow-2xl my-auto">
-              <h2 className="text-2xl font-black text-gray-800 mb-6 border-b pb-4">
-                {editingId ? "📝 Chỉnh sửa món" : "✨ Thêm món mới"}
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 overflow-y-auto">
+            {/* Mobile: bo góc trên, full width; Desktop: bo tròn 3xl */}
+            <div className="bg-white rounded-t-3xl sm:rounded-3xl p-5 md:p-8 max-w-4xl w-full shadow-2xl max-h-[92vh] sm:max-h-[85vh] overflow-y-auto flex flex-col">
+              
+              <h2 className="text-xl md:text-2xl font-black text-gray-800 mb-4 md:mb-6 border-b pb-3 md:pb-4 flex justify-between items-center sticky top-0 bg-white z-10">
+                <span>{editingId ? "📝 Chỉnh sửa món" : "✨ Thêm món mới"}</span>
+                <button type="button" onClick={closeModal} className="sm:hidden text-gray-400 p-1 text-xl">✕</button>
               </h2>
               
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Cột trái: Thông tin cơ bản */}
+              <form onSubmit={handleSubmit} className="space-y-5 flex-1 pb-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                  {/* Cột trái */}
                   <div className="space-y-4">
-                    <label className="block text-sm font-bold text-gray-600">Tiêu đề sản phẩm
+                    <label className="block text-xs md:text-sm font-bold text-gray-600">Tiêu đề sản phẩm <span className="text-red-500">*</span>
                       <input type="text" required className="admin-input" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} />
                     </label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <label className="block text-sm font-bold text-gray-600">Tên ngắn
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="block text-xs md:text-sm font-bold text-gray-600">Tên ngắn
                         <input type="text" className="admin-input" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
                       </label>
-                      <label className="block text-sm font-bold text-gray-600">Tiếng Anh
+                      <label className="block text-xs md:text-sm font-bold text-gray-600">Tiếng Anh
                         <input type="text" className="admin-input" value={formData.name_en} onChange={(e) => setFormData({...formData, name_en: e.target.value})} />
                       </label>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <label className="block text-sm font-bold text-gray-600">Giá bán (VNĐ)
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="block text-xs md:text-sm font-bold text-gray-600">Giá bán (VNĐ) <span className="text-red-500">*</span>
                         <input type="number" required className="admin-input" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} />
                       </label>
-                      <label className="block text-sm font-bold text-gray-600">Loại
-                        <select className="admin-input" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
+                      <label className="block text-xs md:text-sm font-bold text-gray-600">Loại
+                        <select className="admin-input cursor-pointer" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
                           <option value="single">Single</option>
                           <option value="mix">Mix</option>
                           <option value="other">Other</option>
@@ -320,80 +367,86 @@ export default function AdminProducts() {
                     </div>
                   </div>
 
-                  {/* Cột phải: Hình ảnh & Mô tả */}
+                  {/* Cột phải */}
                   <div className="space-y-4">
-                    <label className="block text-sm font-bold text-gray-600">Link hình ảnh
+                    <label className="block text-xs md:text-sm font-bold text-gray-600">Link hình ảnh <span className="text-red-500">*</span>
                       <input type="text" required className="admin-input" value={formData.image} onChange={(e) => setFormData({...formData, image: e.target.value})} />
                     </label>
-                    <label className="block text-sm font-bold text-gray-600">Tiêu đề phụ
+                    <label className="block text-xs md:text-sm font-bold text-gray-600">Tiêu đề phụ
                       <input type="text" className="admin-input" value={formData.sub_title} onChange={(e) => setFormData({...formData, sub_title: e.target.value})} />
                     </label>
                     
-                    {/* Thêm phần cấu hình trạng thái ẩn hiện bằng Checkbox trong Form */}
                     <div className="flex items-center gap-2 pt-2">
                       <input 
                         type="checkbox" 
                         id="isVisible"
-                        className="w-4 h-4 accent-orange-500 rounded"
+                        className="w-4 h-4 accent-orange-500 rounded cursor-pointer"
                         checked={formData.isVisible} 
                         onChange={(e) => setFormData({...formData, isVisible: e.target.checked})} 
                       />
-                      <label htmlFor="isVisible" className="text-sm font-bold text-gray-700 cursor-pointer">
+                      <label htmlFor="isVisible" className="text-xs md:text-sm font-bold text-gray-700 cursor-pointer select-none">
                         Hiển thị sản phẩm này trên cửa hàng
                       </label>
                     </div>
                   </div>
                 </div>
 
-                {/* Mô tả tóm tắt (Đưa xuống dưới do thêm trường ẩn hiện ở cột phải) */}
                 <div className="w-full">
-                  <label className="block text-sm font-bold text-gray-600">Mô tả tóm tắt
+                  <label className="block text-xs md:text-sm font-bold text-gray-600">Mô tả tóm tắt
                     <textarea rows={2} className="admin-input" value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
                   </label>
                 </div>
 
-                {/* PHẦN QUẢN LÝ BENEFITS (Thay thế Nutrition) */}
-                <div className="bg-gray-50 p-6 rounded-2xl border border-dashed border-gray-300">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-sm font-black text-orange-600 uppercase tracking-wider">🌟 Lợi ích sức khỏe (Benefits)</h3>
-                    <button type="button" onClick={addBenefitField} className="text-xs bg-orange-100 text-orange-600 px-3 py-1 rounded-full font-bold hover:bg-orange-200">
-                      + Thêm thẻ lợi ích
+                {/* PHẦN LỢI ÍCH SỨC KHỎE (BENEFITS) */}
+                <div className="bg-gray-50 p-4 md:p-6 rounded-2xl border border-dashed border-gray-300">
+                  <div className="flex justify-between items-center mb-4 gap-2">
+                    <h3 className="text-xs md:text-sm font-black text-orange-600 uppercase tracking-wider">🌟 Lợi ích sức khỏe</h3>
+                    <button type="button" onClick={addBenefitField} className="text-[11px] bg-orange-100 text-orange-600 px-3 py-1.5 rounded-full font-bold hover:bg-orange-200 transition">
+                      + Thêm thẻ
                     </button>
                   </div>
                   
                   <div className="space-y-3">
                     {Array.isArray(benefits) && benefits.map((b, idx) => (
-                      <div key={idx} className="grid grid-cols-12 gap-2 bg-white p-3 rounded-xl shadow-sm border text-gray-700">
-                        <input className="col-span-1 text-center border rounded-lg p-2" placeholder="Icon" value={b.icon} onChange={(e) => updateBenefit(idx, 'icon', e.target.value)} />
-                        <input className="col-span-3 border rounded-lg p-2 font-bold" placeholder="Tiêu đề" value={b.title} onChange={(e) => updateBenefit(idx, 'title', e.target.value)} />
-                        <input className="col-span-5 border rounded-lg p-2 text-sm" placeholder="Nội dung chi tiết..." value={b.content} onChange={(e) => updateBenefit(idx, 'content', e.target.value)} />
-                        <input className="col-span-2 h-10 w-full rounded-lg cursor-pointer" value={b.color} onChange={(e) => updateBenefit(idx, 'color', e.target.value)} />
-                        <button type="button" onClick={() => removeBenefit(idx)} className="col-span-1 text-red-400 hover:text-red-600 font-bold">✕</button>
+                      <div key={idx} className="flex flex-col sm:grid sm:grid-cols-12 gap-2 bg-white p-3 rounded-xl shadow-sm border text-gray-700 relative pt-7 sm:pt-3">
+                        {/* Nút xóa nhanh góc phải trên điện thoại */}
+                        <button type="button" onClick={() => removeBenefit(idx)} className="absolute top-2 right-2 sm:static sm:col-span-1 text-red-400 hover:text-red-600 font-bold text-right sm:text-center text-sm">✕</button>
+                        
+                        <div className="grid grid-cols-4 sm:contents gap-2">
+                          <input className="col-span-1 sm:col-span-1 text-center border rounded-lg p-2 text-sm" placeholder="Icon" value={b.icon} onChange={(e) => updateBenefit(idx, 'icon', e.target.value)} />
+                          <input className="col-span-3 sm:col-span-3 border rounded-lg p-2 font-bold text-sm" placeholder="Tiêu đề" value={b.title} onChange={(e) => updateBenefit(idx, 'title', e.target.value)} />
+                        </div>
+                        <input className="sm:col-span-5 border rounded-lg p-2 text-sm" placeholder="Nội dung chi tiết..." value={b.content} onChange={(e) => updateBenefit(idx, 'content', e.target.value)} />
+                        <input className="sm:col-span-2 h-9 w-full rounded-lg cursor-pointer border px-1 text-xs" placeholder="Màu class" value={b.color} onChange={(e) => updateBenefit(idx, 'color', e.target.value)} />
                       </div>
                     ))}
                     {benefits.length === 0 && <p className="text-center text-gray-400 text-xs py-4 italic">Chưa có lợi ích nào được thêm.</p>}
                   </div>
                 </div>
 
-                <div className="flex gap-4 pt-4">
-                  <button type="button" onClick={closeModal} className="flex-1 bg-gray-100 py-3 rounded-xl font-bold text-gray-500">Hủy</button>
-                  <button type="submit" className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-bold shadow-lg">Lưu thông tin</button>
+                {/* Khối nút lưu thông tin */}
+                <div className="flex gap-3 pt-2 sticky bottom-0 bg-white">
+                  <button type="button" onClick={closeModal} className="flex-1 bg-gray-100 py-3 rounded-xl font-bold text-gray-500 text-sm">Hủy</button>
+                  <button type="submit" className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-bold shadow-lg text-sm">Lưu thông tin</button>
                 </div>
               </form>
             </div>
           </div>
         )}
       </div>
+      
+      {/* Scope Style */}
       <style jsx>{`
         .admin-input {
           width: 100%;
           border: 1px solid #e5e7eb;
-          padding: 0.6rem 0.8rem;
+          padding: 0.65rem 0.8rem;
           border-radius: 0.75rem;
           outline: none;
-          margin-top: 0.25rem;
+          margin-top: 0.3rem;
           font-size: 0.875rem;
           background: white;
+          transition: border-color 0.2s;
         }
         .admin-input:focus { border-color: #f97316; }
       `}</style>
