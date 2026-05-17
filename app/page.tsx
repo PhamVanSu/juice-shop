@@ -1,3 +1,5 @@
+export const revalidate = 0;
+
 import ProductItem from "./component/ProductItem";
 import { getProductByType } from './api/productState';
 
