@@ -1,5 +1,6 @@
 "use client";
 import { useCart } from "../api/useCart";
+import { Toaster, toast } from "react-hot-toast";
 
 interface Product {
   id: string;
@@ -7,6 +8,7 @@ interface Product {
   name_en: string;
   price: number | string;
   image: string;
+  title: string
 }
 
 interface ProductListProps {
@@ -23,15 +25,15 @@ export default function ProductList({ singleProducts, mixProducts, otherProducts
     // Ép kiểu dữ liệu phù hợp với CartItem của Zustand store
     addToCart({
       id: product.id,
-      title: product.name, // Đồng bộ trường name thành title như khai báo ở Store
+      title: product.title, // Đồng bộ trường name thành title như khai báo ở Store
       price: Number(product.price),
       image: product.image,
-      comment: "",
     });
-    alert(`Đã thêm ${product.name} vào giỏ hàng! 🛒`);
+    toast.success(`Đã thêm ${product.title} vào giỏ hàng! 🥤`);
   };
 
   return (
+    <>
     <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-10 relative z-10">
       {/* 🍊 NƯỚC ÉP THƯỜNG */}
       <div className="relative rounded-xl overflow-hidden shadow-lg">
@@ -137,5 +139,7 @@ export default function ProductList({ singleProducts, mixProducts, otherProducts
         </div>
       </div>
     </div>
+    <Toaster />
+    </>
   );
 }

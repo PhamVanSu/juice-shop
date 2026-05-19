@@ -25,18 +25,37 @@ export const useCart = create<CartStore>()(
     (set) => ({
       cart: [],
       
-      // SỬA TẠI ĐÂY: Tách dòng sản phẩm
-      addToCart: (product) => set((state) => ({
-        cart: [
-          ...state.cart, 
-          { 
-            ...product, 
-            cartId: Date.now().toString() + Math.random().toString(36).substr(2, 9), // Tạo ID duy nhất cho dòng này
+      addToCart: (product) => set((state) => {
+        // Chuẩn hóa ghi chú của sản phẩm chuẩn bị thêm vào (tránh lỗi undefined)
+        const newComment = (product.comment || "").trim();
+
+        // Tìm xem trong giỏ hàng đã có sản phẩm này với CÙNG một ghi chú chưa
+        const existingItemIndex = state.cart.findIndex(
+          (item) => item.id === product.id && (item.comment || "").trim() === newComment
+        );
+
+        if (existingItemIndex > -1) {
+          // Trường hợp 1: Đã tồn tại trùng ID và trùng Ghi chú -> Cộng dồn số lượng
+          const updatedCart = [...state.cart];
+          updatedCart[existingItemIndex].quantity += product.quantity || 1;
+          
+          return { cart: updatedCart };
+        } else {
+          // Trường hợp 2: Sản phẩm mới hoàn toàn (hoặc trùng ID nhưng ghi chú khác) -> Thêm dòng mới
+          const newCartItem: CartItem = {
+            id: product.id,
+            title: product.title,
+            image: product.image,
+            comment: newComment,
             price: Number(product.price),
-            quantity: 1 
-          }
-        ]
-      })),
+            quantity: product.quantity || 1,
+            // Tạo cartId duy nhất cho dòng này để phục vụ việc xóa/sửa sau này ở trang giỏ hàng
+            cartId: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+          };
+
+          return { cart: [...state.cart, newCartItem] };
+        }
+      }),
       
       removeFromCart: (cartId) => set((state) => ({
         cart: state.cart.filter((item) => item.cartId !== cartId)

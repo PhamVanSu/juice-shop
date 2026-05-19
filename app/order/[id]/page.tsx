@@ -29,18 +29,15 @@ export default function OrderSuccess() {
 
     const docRef = doc(db, "orders", orderId);
 
-    // Sử dụng onSnapshot để tự động đồng bộ dữ liệu khi có thay đổi từ phía admin/hệ thống khác
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
       try {
         if (docSnap.exists()) {
           const data = docSnap.data();
 
-          // Kiểm tra nếu đơn hàng bị hủy
           if (data.status === "cancelled") {
             setError("Đơn hàng này đã bị hủy. Vui lòng liên hệ hỗ trợ để biết thêm chi tiết.");
             setOrder(null);
           } else {
-            // Đơn hàng hợp lệ, cập nhật vào state và xóa bỏ thông báo lỗi cũ nếu có
             setOrder({ id: docSnap.id, ...data });
             setError("");
           }
@@ -60,11 +57,9 @@ export default function OrderSuccess() {
       setLoading(false);
     });
 
-    // Huỷ lắng nghe khi Component bị unmount để tránh rò rỉ bộ nhớ (Memory Leak)
     return () => unsubscribe();
   }, [orderId]);
 
-  // LÊN ƯU TIÊN 1: Đang tải dữ liệu
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-green-50">
@@ -74,7 +69,6 @@ export default function OrderSuccess() {
     );
   }
 
-  // LÊN ƯU TIÊN 2: Hiển thị giao diện báo lỗi (Hủy đơn / Không tồn tại mã)
   if (error) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-green-50">
@@ -93,7 +87,6 @@ export default function OrderSuccess() {
     );
   }
 
-  // LÊN ƯU TIÊN 3: Phòng hờ trường hợp không có lỗi nhưng dữ liệu bị null rỗng
   if (!order) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-green-50">
@@ -105,7 +98,18 @@ export default function OrderSuccess() {
     );
   }
 
+  // HÀM HỦY ĐƠN HÀNG (ĐÃ THÊM VALIDATE SECURITY)
   const handleCancelOrder = async () => {
+    // Rào chắn kiểm tra: Nếu trạng thái hiện tại khác 'pending', chặn lại ngay
+    if (order.status !== "pending") {
+      alert("Nhà Su đã bắt đầu chế biến nước ép nên không thể hủy đơn hàng này. Xin lỗi bạn vì sự bất tiện này!");
+      return;
+    }
+
+    if (!confirm("Bạn có chắc chắn muốn hủy đơn hàng này không?")) {
+      return; // Người dùng bấm Hủy hộp thoại confirm thì dừng lại
+    }
+
     try {
       await updateDoc(doc(db, "orders", orderId), {
         status: "cancelled",
@@ -115,7 +119,7 @@ export default function OrderSuccess() {
       router.push("/");
     } catch (error) {
       console.error(error);
-      alert("Huỷ đơn thất bại");
+      alert("Huỷ đơn thất bại, vui lòng thử lại sau!");
     }
   };
 
@@ -190,12 +194,16 @@ export default function OrderSuccess() {
           >
             Về trang chủ
           </button>
-          <button
-            onClick={() => handleCancelOrder()}
-            className="bg-orange-600 text-white font-bold px-10 py-4 rounded-full shadow-lg hover:bg-orange-700 transition"
-          >
-            Huỷ đơn hàng
-          </button>
+          
+          {/* ĐÃ TỐI ƯU: Chỉ hiển thị nút hủy đơn khi trạng thái là pending */}
+          {order.status === "pending" && (
+            <button
+              onClick={handleCancelOrder}
+              className="bg-orange-600 text-white font-bold px-10 py-4 rounded-full shadow-lg hover:bg-orange-700 transition"
+            >
+              Huỷ đơn hàng
+            </button>
+          )}
         </div>
       </div>
     </div>
