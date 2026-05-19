@@ -98,16 +98,14 @@ export default function OrderSuccess() {
     );
   }
 
-  // HÀM HỦY ĐƠN HÀNG (ĐÃ THÊM VALIDATE SECURITY)
   const handleCancelOrder = async () => {
-    // Rào chắn kiểm tra: Nếu trạng thái hiện tại khác 'pending', chặn lại ngay
     if (order.status !== "pending") {
       alert("Nhà Su đã bắt đầu chế biến nước ép nên không thể hủy đơn hàng này. Xin lỗi bạn vì sự bất tiện này!");
       return;
     }
 
     if (!confirm("Bạn có chắc chắn muốn hủy đơn hàng này không?")) {
-      return; // Người dùng bấm Hủy hộp thoại confirm thì dừng lại
+      return; 
     }
 
     try {
@@ -126,6 +124,18 @@ export default function OrderSuccess() {
   const currentStatus = STATUS_OPTIONS.find((opt) => opt.value === order.status);
   const isPaid = order.isPaid === true; 
 
+  // --- LOGIC TỰ ĐỘNG TẠO LINK QR CODE ĐỘNG ---
+  // Định dạng VietQR: https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-<TEMPLATE>.png?amount=<AMOUNT>&addInfo=<DESCRIPTION>&accountName=<ACCOUNT_NAME>
+  const bankId = "bidv"; // Mã ngân hàng BIDV định dạng chuẩn ngân hàng
+  const accountNumber = "1990628358";
+  const accountName = encodeURIComponent("NGUYEN PHUONG THAO");
+  const amount = order.totalAmount || 0;
+  // Nội dung chuyển khoản: Mã đơn hàng (Loại bỏ ký tự khoảng trắng thừa nếu có)
+  const description = encodeURIComponent(`${order.orderCode || orderId}`);
+  
+  // Sử dụng template 'qr_only' để chỉ hiển thị mã QR gọn gàng hoặc 'compact2' để có kèm logo ngân hàng
+  const qrCodeUrl = `https://img.vietqr.io/image/${bankId}-${accountNumber}-compact2.png?amount=${amount}&addInfo=${description}&accountName=${accountName}`;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-yellow-100 py-16 px-6">
       <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl p-10 text-center">
@@ -140,22 +150,28 @@ export default function OrderSuccess() {
           <div className="text-left bg-orange-50 p-6 rounded-2xl border border-orange-100">
             <h2 className="text-xl font-bold text-orange-600 mb-4 border-b border-orange-200 pb-2">📦 Chi tiết đơn hàng</h2>
             <div className="space-y-2 text-gray-700">
-              <p><strong>Mã đơn:</strong> <span className="text-sm font-mono">{order.orderCode}</span></p>
+              <p><strong>Mã đơn:</strong> <span className="text-sm font-mono font-bold text-gray-800">{order.orderCode}</span></p>
               <p><strong>Khách hàng:</strong> {order.customer?.name}</p>
               <p><strong>SĐT:</strong> {order.customer?.phone}</p>
               <p><strong>Địa chỉ:</strong> {order.customer?.address}</p>
-              <p><strong>Trạng thái:</strong> <span className="bg-yellow-200 text-yellow-800 px-2 py-1 rounded text-xs uppercase font-bold">{currentStatus?.label}</span></p>
+              <p><strong>Trạng thái:</strong> <span className={`px-2 py-0.5 rounded text-xs uppercase font-bold ${currentStatus?.color || 'bg-gray-100'}`}>{currentStatus?.label}</span></p>
               <p><strong>Thanh toán:</strong> {isPaid ? "✅ Đã trả tiền" : "❌ Chưa trả"}</p>
             </div>
           </div>
 
-          {/* QR Code thanh toán */}
+          {/* QR Code tự động sinh động */}
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center">
-            <h2 className="text-lg font-bold text-gray-700 mb-4">Quét mã QR thanh toán</h2>
-            <div className="bg-gray-100 w-40 h-40 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-                <img src="/images/qr.jpeg" alt="QR Code" className="w-full h-full object-cover" />
+            <h2 className="text-lg font-bold text-gray-700 mb-3">Quét mã QR để thanh toán</h2>
+            
+            <div className="bg-white w-60 h-60 rounded-xl flex items-center justify-center border-2 border-dashed border-orange-200 p-2 shadow-inner">
+              {/* Ảnh QR tĩnh cũ đã được thay thế bằng URL QR động từ API VietQR */}
+              <img 
+                src={qrCodeUrl} 
+                alt="Mã QR Thanh toán Nhà Su" 
+                className="w-full h-full object-contain"
+                loading="lazy"
+              />
             </div>
-            <p className="text-xs text-gray-500 mt-2 italic">NGUYEN PHUONG THAO <br/>BIDV - PGD Tuệ Tĩnh: 1990628358 </p>
           </div>
         </div>
 
@@ -195,7 +211,6 @@ export default function OrderSuccess() {
             Về trang chủ
           </button>
           
-          {/* ĐÃ TỐI ƯU: Chỉ hiển thị nút hủy đơn khi trạng thái là pending */}
           {order.status === "pending" && (
             <button
               onClick={handleCancelOrder}

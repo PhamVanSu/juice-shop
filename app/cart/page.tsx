@@ -25,8 +25,8 @@ export default function CartPage() {
 
   const [customerInfo, setCustomerInfo] = useState({
     name: "",
-    phone: "",
-    address: "",
+    phone: "0",
+    address: "F-Ville2",
   });
 
   useEffect(() => {
