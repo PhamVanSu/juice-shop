@@ -6,6 +6,13 @@ import {
   collection, getDocs, doc, deleteDoc, addDoc, updateDoc, 
   serverTimestamp, query, orderBy, where, limit, startAfter, getCountFromServer 
 } from "firebase/firestore";
+import { HiOutlineBeaker, HiOutlineTrash, HiOutlinePlusCircle } from "react-icons/hi";
+
+// Định nghĩa kiểu dữ liệu cho định lượng nguyên liệu
+interface IngredientConfig {
+  name: string;
+  ml: number;
+}
 
 export default function AdminProducts() {
   const [products, setProducts] = useState<any[]>([]);
@@ -24,11 +31,13 @@ export default function AdminProducts() {
   const [formData, setFormData] = useState({
     title: "", name: "", name_en: "", sub_title: "", 
     price: "", image: "", description: "", 
-    ingredient: "", type: "single",
-    isVisible: true 
+    type: "single", isVisible: true 
   });
   
   const [benefits, setBenefits] = useState<any[]>([]);
+  
+  // --- STATE MỚI: Quản lý định lượng hoa quả cần ép (ml) ---
+  const [ingredients, setIngredients] = useState<IngredientConfig[]>([]);
 
   const fetchTotalCount = async () => {
     const coll = collection(db, "products");
@@ -83,6 +92,26 @@ export default function AdminProducts() {
     }
   };
 
+  // --- LOGIC ĐIỀU CHỈNH ĐỊNH LƯỢNG NGUYÊN LIỆU (Mới) ---
+  const addIngredientField = () => {
+    setIngredients([...ingredients, { name: "", ml: 300 }]);
+  };
+
+  const updateIngredient = (index: number, field: keyof IngredientConfig, value: any) => {
+    const newIngredients = [...ingredients];
+    if (field === "ml") {
+      newIngredients[index][field] = Number(value) || 0;
+    } else {
+      newIngredients[index][field] = value;
+    }
+    setIngredients(newIngredients);
+  };
+
+  const removeIngredient = (index: number) => {
+    setIngredients(ingredients.filter((_, i) => i !== index));
+  };
+
+  // --- Logic cũ giữ nguyên ---
   const addBenefitField = () => {
     setBenefits([...benefits, { icon: "✨", title: "", content: "", color: "text-green-500" }]);
   };
@@ -113,9 +142,19 @@ export default function AdminProducts() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Chuyển mảng ingredients thành object cấu trúc phẳng { "Dứa": 300, "Táo": 300 } 
+      // để khớp hoàn hảo với logic đồng bộ tính toán ở trang Kitchen quầy bar
+      const recipeObject: { [key: string]: number } = {};
+      ingredients.forEach((ing) => {
+        if (ing.name.trim()) {
+          recipeObject[ing.name.trim()] = ing.ml;
+        }
+      });
+
       const dataToSave = {
         ...formData,
         benefits: benefits,
+        recipe: recipeObject, // Lưu trường này vào Firestore thay vì text thô
         price: Number(formData.price),
         updatedAt: serverTimestamp(),
       };
@@ -153,6 +192,19 @@ export default function AdminProducts() {
   const openEdit = (product: any) => {
     setEditingId(product.id);
     setBenefits(product.benefits || []);
+    
+    // Đọc object công thức từ Firestore `recipe: { "Dứa": 300 }` 
+    // và phân tách ngược lại về dạng mảng `[{ name: "Dứa", ml: 300 }]` để điền vào Form
+    if (product.recipe) {
+      const parsedIngredients = Object.keys(product.recipe).map((key) => ({
+        name: key,
+        ml: product.recipe[key],
+      }));
+      setIngredients(parsedIngredients);
+    } else {
+      setIngredients([]);
+    }
+
     setFormData({
       title: product.title || "",
       name: product.name || "",
@@ -161,7 +213,6 @@ export default function AdminProducts() {
       price: product.price?.toString() || "",
       image: product.image || "",
       description: product.description || "",
-      ingredient: product.ingredient || "",
       type: product.type || "single",
       isVisible: product.isVisible !== undefined ? product.isVisible : true,
     });
@@ -172,10 +223,11 @@ export default function AdminProducts() {
     setIsModalOpen(false);
     setEditingId(null);
     setBenefits([]);
+    setIngredients([]);
     setFormData({ 
       title: "", name: "", name_en: "", sub_title: "", 
       price: "", image: "", description: "", 
-      ingredient: "", type: "single", isVisible: true 
+      type: "single", isVisible: true 
     });
   };
 
@@ -227,7 +279,6 @@ export default function AdminProducts() {
                   </div>
                 </div>
                 
-                {/* Thanh điều khiển dưới đáy card mobile */}
                 <div className="flex justify-between items-center pt-2 border-t border-gray-100 mt-1">
                   <button 
                     onClick={() => toggleVisibility(product.id, product.isVisible !== false)}
@@ -301,7 +352,7 @@ export default function AdminProducts() {
           </table>
         </div>
 
-        {/* THANH PHÂN TRANG (Tối ưu responsive tràn dòng) */}
+        {/* THANH PHÂN TRANG */}
         <div className="mt-4 p-4 bg-white md:bg-gray-50 border rounded-xl md:rounded-none md:border-none md:border-t flex flex-col sm:flex-row gap-3 justify-between items-center shadow-sm">
           <span className="text-xs md:text-sm text-gray-500">
             Hiển thị {products.length} / {totalCount} sản phẩm
@@ -330,7 +381,6 @@ export default function AdminProducts() {
         {/* ================= MODAL FORM CHỈNH SỬA / THÊM MÓN ================= */}
         {isModalOpen && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 overflow-y-auto">
-            {/* Mobile: bo góc trên, full width; Desktop: bo tròn 3xl */}
             <div className="bg-white rounded-t-3xl sm:rounded-3xl p-5 md:p-8 max-w-4xl w-full shadow-2xl max-h-[92vh] sm:max-h-[85vh] overflow-y-auto flex flex-col">
               
               <h2 className="text-xl md:text-2xl font-black text-gray-800 mb-4 md:mb-6 border-b pb-3 md:pb-4 flex justify-between items-center sticky top-0 bg-white z-10">
@@ -397,11 +447,74 @@ export default function AdminProducts() {
                   </label>
                 </div>
 
+                {/* ================= MỤC MỚI: CẤU HÌNH ĐỊNH LƯỢNG HOA QUẢ (ML RECIPE) ================= */}
+                <div className="bg-orange-50/40 p-4 md:p-6 rounded-2xl border border-dashed border-orange-200">
+                  <div className="flex justify-between items-center mb-4 gap-2">
+                    <h3 className="text-xs md:text-sm font-black text-orange-600 uppercase tracking-wider flex items-center gap-1.5">
+                      <HiOutlineBeaker size={18} /> Cấu hình lượng cốt hoa quả cần ép (ml)
+                    </h3>
+                    <button 
+                      type="button" 
+                      onClick={addIngredientField} 
+                      className="text-[11px] bg-orange-500 text-white px-3 py-1.5 rounded-full font-bold hover:bg-orange-600 transition flex items-center gap-1 shadow-sm"
+                    >
+                      <HiOutlinePlusCircle size={14} /> Thêm quả
+                    </button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {ingredients.map((ing, idx) => (
+                      <div key={idx} className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-gray-100 shadow-sm">
+                        <select 
+                          className="flex-1 p-2 border rounded-lg text-xs md:text-sm font-bold text-gray-700 bg-gray-50 outline-none"
+                          value={ing.name}
+                          onChange={(e) => updateIngredient(idx, 'name', e.target.value)}
+                        >
+                          <option value="">-- Chọn quả --</option>
+                          <option value="Pineapple">Quả Dứa (Thơm)</option>
+                          <option value="Apple">Quả Táo</option>
+                          <option value="Orange">Quả Cam</option>
+                          <option value="Ambarella">Quả Cóc</option>
+                          <option value="Guava">Quả Ổi</option>
+                          <option value="Carrot">Cà rốt</option>
+                          <option value="Watermelon">Dưa hấu</option>
+                          <option value="lemon">Chanh tươi</option>
+                        </select>
+
+                        <div className="flex items-center gap-1.5 w-32">
+                          <input 
+                            type="number" 
+                            className="w-full p-2 border rounded-lg text-xs md:text-sm font-black text-right text-orange-600 outline-none"
+                            placeholder="ml"
+                            value={ing.ml || ""} 
+                            onChange={(e) => updateIngredient(idx, 'ml', e.target.value)} 
+                          />
+                          <span className="text-xs font-bold text-gray-400">ml</span>
+                        </div>
+
+                        <button 
+                          type="button" 
+                          onClick={() => removeIngredient(idx)} 
+                          className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                          title="Xóa nguyên liệu"
+                        >
+                          <HiOutlineTrash size={16} />
+                        </button>
+                      </div>
+                    ))}
+                    {ingredients.length === 0 && (
+                      <p className="col-span-2 text-center text-gray-400 text-xs py-4 italic">
+                        Chưa cấu hình định lượng (Món nước này sẽ tính mặc định bằng 1 cốc thô bên quầy bar).
+                      </p>
+                    )}
+                  </div>
+                </div>
+
                 {/* PHẦN LỢI ÍCH SỨC KHỎE (BENEFITS) */}
                 <div className="bg-gray-50 p-4 md:p-6 rounded-2xl border border-dashed border-gray-300">
                   <div className="flex justify-between items-center mb-4 gap-2">
-                    <h3 className="text-xs md:text-sm font-black text-orange-600 uppercase tracking-wider">🌟 Lợi ích sức khỏe</h3>
-                    <button type="button" onClick={addBenefitField} className="text-[11px] bg-orange-100 text-orange-600 px-3 py-1.5 rounded-full font-bold hover:bg-orange-200 transition">
+                    <h3 className="text-xs md:text-sm font-black text-gray-500 uppercase tracking-wider">🌟 Lợi ích sức khỏe</h3>
+                    <button type="button" onClick={addBenefitField} className="text-[11px] bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full font-bold hover:bg-gray-200 transition">
                       + Thêm thẻ
                     </button>
                   </div>
@@ -409,7 +522,6 @@ export default function AdminProducts() {
                   <div className="space-y-3">
                     {Array.isArray(benefits) && benefits.map((b, idx) => (
                       <div key={idx} className="flex flex-col sm:grid sm:grid-cols-12 gap-2 bg-white p-3 rounded-xl shadow-sm border text-gray-700 relative pt-7 sm:pt-3">
-                        {/* Nút xóa nhanh góc phải trên điện thoại */}
                         <button type="button" onClick={() => removeBenefit(idx)} className="absolute top-2 right-2 sm:static sm:col-span-1 text-red-400 hover:text-red-600 font-bold text-right sm:text-center text-sm">✕</button>
                         
                         <div className="grid grid-cols-4 sm:contents gap-2">

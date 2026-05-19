@@ -63,12 +63,12 @@ export default async function Home() {
       </section>
 
       {/* BANNER */}
-      <section className="bg-orange-400 text-white text-center py-10 px-6">
+      {/* <section className="bg-orange-400 text-white text-center py-10 px-6">
         <h2 className="text-2xl md:text-3xl font-bold">
           🎉 Giảm ngay 15% cho các đơn hàng ngày khai trương 18/05/2026!
         </h2>
         <p className="mt-2">Nhanh tay đặt hàng ngay để nhận được ưu đãi</p>
-      </section>
+      </section> */}
     </>
   );
 }

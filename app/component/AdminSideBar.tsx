@@ -14,6 +14,7 @@ export default function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
     { name: "Thống kê", href: "/admin/dashboard", icon: <HiOutlineChartBar size={20} /> },
     { name: "Sản phẩm", href: "/admin/products", icon: <HiOutlineCube size={20} /> },
     { name: "Đơn hàng", href: "/admin/orders", icon: <HiOutlineClipboardList size={20} /> },
+    { name: "Điều phối đơn hàng", href: "/admin/kitchenOrders", icon: <HiOutlineClipboardList size={20} /> },
   ];
 
   return (
