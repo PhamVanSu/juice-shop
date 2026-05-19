@@ -63,7 +63,7 @@ export default function KitchenOrders() {
     const ordersRef = collection(db, "orders");
     const unsubscribe = onSnapshot(ordersRef, (snapshot) => {
       try {
-        const data = snapshot.docs.map((doc) => ({
+        const data: any[] = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
           createdAt: doc.data().createdAt?.toDate() || new Date(),
