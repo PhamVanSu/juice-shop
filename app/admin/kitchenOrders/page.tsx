@@ -5,6 +5,9 @@ import { db } from "@/lib/firebase";
 import { collection, doc, updateDoc, onSnapshot, getDocs } from "firebase/firestore";
 import { HiOutlineClock, HiOutlinePlay, HiOutlineCheck, HiOutlineUser, HiOutlinePhone, HiOutlineLocationMarker, HiOutlineBeaker, HiOutlineClipboardList } from "react-icons/hi";
 
+// Đảm bảo Vercel luôn lấy dữ liệu Realtime, không lưu cache tĩnh lúc Build
+export const dynamic = "force-dynamic";
+
 const STATUS_CONFIG: { [key: string]: { label: string; color: string; nextStatus: string | null; btnText: string; btnColor: string; icon: any } } = {
   pending: {
     label: "Chờ xử lý",
@@ -26,29 +29,22 @@ const STATUS_CONFIG: { [key: string]: { label: string; color: string; nextStatus
 
 export default function KitchenOrders() {
   const [activeOrders, setActiveOrders] = useState<any[]>([]);
-  const [productRecipes, setProductRecipes] = useState<{ [key: string]: any }>({});
+  const [productRecipes, setProductRecipes] = useState<{ [productId: string]: any }>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Tải trước toàn bộ cấu hình định lượng (recipe) từ collection "products"
+    // 1. Tải trước toàn bộ cấu hình định lượng (recipe) map theo Product ID từ "products"
     const fetchRecipes = async () => {
       try {
         const productSnapshot = await getDocs(collection(db, "products"));
-        const recipesMap: { [key: string]: any } = {};
+        const recipesMap: { [productId: string]: any } = {};
         
         productSnapshot.docs.forEach((docDoc) => {
           const pData = docDoc.data();
-          const nameEnKey = pData.name_en?.trim().toLowerCase();
-          const titleKey = pData.title?.trim().toLowerCase();
+          const productId = docDoc.id; // Lấy chính xác ID của Document trong bảng products
           
           if (pData.recipe) {
-            // Giải pháp an toàn: Tạo map theo cả name_en VÀ title tiếng Việt
-            if (nameEnKey) {
-              recipesMap[nameEnKey] = pData.recipe;
-            }
-            if (titleKey) {
-              recipesMap[titleKey] = pData.recipe;
-            }
+            recipesMap[productId] = pData.recipe; // Lưu trực tiếp object định lượng { "Dứa": 300, "Táo": 200 }
           }
         });
         setProductRecipes(recipesMap);
@@ -85,23 +81,23 @@ export default function KitchenOrders() {
     return () => unsubscribe();
   }, []);
 
-  // ================= LOGIC TỔNG HỢP SẢN PHẨM & NGUYÊN LIỆU DỰA TRÊN DATABASE =================
+  // ================= LOGIC TỔNG HỢP SẢN PHẨM & NGUYÊN LIỆU DỰA TRÊN PRODUCT ID =================
   const summaryProducts: { [title: string]: number } = {};
   const summaryIngredients: { [ingredient: string]: number } = {};
 
   activeOrders.forEach((order) => {
     order.items?.forEach((item: any) => {
-      // Ưu tiên tra cứu theo name_en của item nếu đơn hàng có lưu, nếu không có thì fallback về title
-      const itemKey = (item.name_en || item.title || "").trim().toLowerCase();
-      const displayTitle = item.title?.trim() || item.name_en || "Món không tên";
+      // Tìm ID sản phẩm trong item của đơn hàng (thường là item.productId hoặc item.id tùy cách bạn lưu)
+      const pId = item.productId || item.id;
+      const displayTitle = item.title?.trim() || "Món không tên";
       const qty = Number(item.quantity) || 0;
 
-      if (itemKey) {
-        // 1. Gom tổng số lượng cốc dựa trên tên hiển thị tiếng Việt để quầy bar dễ đọc
-        summaryProducts[displayTitle] = (summaryProducts[displayTitle] || 0) + qty;
+      // 1. Gom tổng số lượng cốc hiển thị
+      summaryProducts[displayTitle] = (summaryProducts[displayTitle] || 0) + qty;
 
-        // 2. Tra cứu công thức động từ bộ nhớ tạm bằng itemKey (đã chuẩn hóa lowercase)
-        const liveRecipe = productRecipes[itemKey];
+      // 2. Tra cứu công thức bằng ID sản phẩm kết nối trực tiếp sang bảng products
+      if (pId) {
+        const liveRecipe = productRecipes[pId];
 
         if (liveRecipe && Object.keys(liveRecipe).length > 0) {
           Object.keys(liveRecipe).forEach((ing) => {
@@ -109,9 +105,12 @@ export default function KitchenOrders() {
             summaryIngredients[ing] = (summaryIngredients[ing] || 0) + mlPerCup * qty;
           });
         } else {
-          // Nếu món ăn chưa được cấu hình lượng cốt ml ở bất kỳ trường nào
-          summaryIngredients["Chưa cấu hình định lượng (ml)"] = (summaryIngredients["Chưa cấu hình định lượng (ml)"] || 0) + qty;
+          // Trường hợp ID có tồn tại nhưng trong bảng products chưa có dữ liệu trường recipe
+          summaryIngredients["Món chưa cấu hình định lượng (ml)"] = (summaryIngredients["Món chưa cấu hình định lượng (ml)"] || 0) + qty;
         }
+      } else {
+        // Trường hợp đơn hàng gửi lên bị thiếu mất ID của sản phẩm
+        summaryIngredients["Đơn lỗi (Thiếu Product ID)"] = (summaryIngredients["Đơn lỗi (Thiếu Product ID)"] || 0) + qty;
       }
     });
   });
@@ -156,14 +155,14 @@ export default function KitchenOrders() {
             <div className="bg-white p-5 rounded-3xl shadow-sm border border-orange-100">
               <div className="flex items-center gap-2 text-orange-600 font-bold mb-4 text-base border-b pb-2">
                 <HiOutlineBeaker size={22} />
-                <h3>Tổng lượng cốt hoa quả cần ép (Cấu hình Live)</h3>
+                <h3>Tổng lượng cốt hoa quả cần ép (ID Matching)</h3>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {Object.keys(summaryIngredients).map((ing) => (
                   <div key={ing} className="bg-orange-50/50 p-3 rounded-2xl border border-orange-100 flex justify-between items-center">
                     <span className="text-sm font-bold text-gray-700">{ing}</span>
                     <span className="text-base font-black text-orange-600">
-                      {ing.includes("Chưa cấu hình") 
+                      {ing.includes("chưa cấu hình") || ing.includes("Thiếu Product ID")
                         ? `${summaryIngredients[ing]} cốc`
                         : summaryIngredients[ing] >= 1000 
                           ? `${(summaryIngredients[ing] / 1000).toFixed(1)} Lít` 
