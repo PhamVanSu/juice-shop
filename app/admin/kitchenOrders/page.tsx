@@ -27,6 +27,18 @@ const STATUS_CONFIG: { [key: string]: { label: string; color: string; nextStatus
   },
 };
 
+// Chuẩn hóa Key về chữ thường để tránh lỗi lệch chữ hoa/chữ thường từ Database
+const FRUIT: { [key: string]: string } = {
+  ambarella: "Cóc",
+  carrot: "Cà rốt",
+  watermelon: "Dưa hấu",
+  guava: "Ổi",
+  orange: "Cam",
+  pineapple: "Dứa",
+  apple: "Táo",
+  lemon: "Chanh"
+};
+
 export default function KitchenOrders() {
   const [activeOrders, setActiveOrders] = useState<any[]>([]);
   const [productRecipes, setProductRecipes] = useState<{ [productId: string]: any }>({});
@@ -41,10 +53,10 @@ export default function KitchenOrders() {
         
         productSnapshot.docs.forEach((docDoc) => {
           const pData = docDoc.data();
-          const productId = docDoc.id; // Lấy chính xác ID của Document trong bảng products
+          const productId = docDoc.id;
           
           if (pData.recipe) {
-            recipesMap[productId] = pData.recipe; // Lưu trực tiếp object định lượng { "Dứa": 300, "Táo": 200 }
+            recipesMap[productId] = pData.recipe;
           }
         });
         setProductRecipes(recipesMap);
@@ -87,7 +99,6 @@ export default function KitchenOrders() {
 
   activeOrders.forEach((order) => {
     order.items?.forEach((item: any) => {
-      // Tìm ID sản phẩm trong item của đơn hàng (thường là item.productId hoặc item.id tùy cách bạn lưu)
       const pId = item.productId || item.id;
       const displayTitle = item.title?.trim() || "Món không tên";
       const qty = Number(item.quantity) || 0;
@@ -105,11 +116,9 @@ export default function KitchenOrders() {
             summaryIngredients[ing] = (summaryIngredients[ing] || 0) + mlPerCup * qty;
           });
         } else {
-          // Trường hợp ID có tồn tại nhưng trong bảng products chưa có dữ liệu trường recipe
-          summaryIngredients["Món chưa cấu hình định lượng (ml)"] = (summaryIngredients["Món chưa cấu hình định lượng (ml)"] || 0) + qty;
+          summaryIngredients["Sữa chua đánh đá"] = (summaryIngredients["Sữa chua đánh đá"] || 0) + qty;
         }
       } else {
-        // Trường hợp đơn hàng gửi lên bị thiếu mất ID của sản phẩm
         summaryIngredients["Đơn lỗi (Thiếu Product ID)"] = (summaryIngredients["Đơn lỗi (Thiếu Product ID)"] || 0) + qty;
       }
     });
@@ -158,19 +167,25 @@ export default function KitchenOrders() {
                 <h3>Tổng lượng cốt hoa quả cần ép (ID Matching)</h3>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                {Object.keys(summaryIngredients).map((ing) => (
-                  <div key={ing} className="bg-orange-50/50 p-3 rounded-2xl border border-orange-100 flex justify-between items-center">
-                    <span className="text-sm font-bold text-gray-700">{ing}</span>
-                    <span className="text-base font-black text-orange-600">
-                      {ing.includes("chưa cấu hình") || ing.includes("Thiếu Product ID")
-                        ? `${summaryIngredients[ing]} cốc`
-                        : summaryIngredients[ing] >= 1000 
-                          ? `${(summaryIngredients[ing] / 1000).toFixed(1)} Lít` 
-                          : `${summaryIngredients[ing]} ml`
-                      }
-                    </span>
-                  </div>
-                ))}
+                {Object.keys(summaryIngredients).map((ing) => {
+                  // Xử lý dịch tên: Chuyển ing về chữ thường để map vào bộ từ điển FRUIT
+                  const normalizedIng = ing.toLowerCase();
+                  const fruitNameVi = FRUIT[normalizedIng] || ing;
+
+                  return (
+                    <div key={ing} className="bg-orange-50/50 p-3 rounded-2xl border border-orange-100 flex justify-between items-center">
+                      <span className="text-sm font-bold text-gray-700">{fruitNameVi}</span>
+                      <span className="text-base font-black text-orange-600">
+                        {ing.includes("Sữa chua đánh đá") || ing.includes("Thiếu Product ID")
+                          ? `${summaryIngredients[ing]} cốc`
+                          : summaryIngredients[ing] >= 1000 
+                            ? `${(summaryIngredients[ing] / 1000).toFixed(1)} Lít` 
+                            : `${summaryIngredients[ing]} ml`
+                        }
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
