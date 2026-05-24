@@ -14,10 +14,11 @@ interface Product {
 interface ProductListProps {
   singleProducts: Product[];
   mixProducts: Product[];
+  smoothieProducts: Product[];
   otherProducts: Product[];
 }
 
-export default function ProductList({ singleProducts, mixProducts, otherProducts }: ProductListProps) {
+export default function ProductList({ singleProducts, mixProducts, smoothieProducts, otherProducts }: ProductListProps) {
   const addToCart = useCart((state) => state.addToCart);
 
   // Hàm bổ trợ xử lý click thêm vào giỏ
@@ -34,7 +35,9 @@ export default function ProductList({ singleProducts, mixProducts, otherProducts
 
   return (
     <>
-    <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-10 relative z-10">
+    {/* Grid tự động chia 2 cột ở màn hình trung bình (md) trở lên */}
+    <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
+      
       {/* 🍊 NƯỚC ÉP THƯỜNG */}
       <div className="relative rounded-xl overflow-hidden shadow-lg">
         <div className="absolute inset-0 bg-gradient-to-br from-orange-100/90 to-yellow-100/80"></div>
@@ -103,41 +106,74 @@ export default function ProductList({ singleProducts, mixProducts, otherProducts
         </div>
       </div>
 
-      {/* 🥭 THỨC UỐNG KHÁC (Đưa vào grid để giao diện cân đối hơn) */}
-      <div className="md:col-span-2 mt-2">
-        <div className="relative rounded-xl overflow-hidden shadow-lg">
-          <div className="absolute inset-0 bg-gradient-to-br from-pink-100/90 to-orange-100/80"></div>
-          <div className="relative p-6">
-            <h2 className="bg-pink-400 text-white px-6 py-2 rounded-full inline-block mb-4 shadow-lg">
-              🥤 Nước uống khác
-            </h2>
-            {otherProducts.map((prod) => (
-              <div
-                key={prod.id}
-                onClick={() => handleAdd(prod)}
-                className="flex items-center justify-between border-b border-dashed border-orange-300 py-2 px-5 cursor-pointer hover:bg-pink-200/40 rounded-lg transition duration-200 group"
-              >
-                <div className="flex items-center gap-3">
-                  <img
-                    src={prod.image}
-                    alt={prod.name}
-                    className="w-14 h-14 rounded-full object-cover bg-white"
-                  />
-                  <div>
-                    <p className="text-pink-600 font-semibold leading-tight group-hover:text-pink-700">
-                      {prod.name}
-                    </p>
-                    <p className="text-orange-400 text-sm">{prod.name_en}</p>
-                  </div>
+      {/* 🥑 SINH TỐ (Bổ sung mới) */}
+      <div className="relative rounded-xl overflow-hidden shadow-lg">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-100/90 to-pink-100/80"></div>
+        <div className="relative p-6">
+          <h2 className="bg-purple-500 text-white px-6 py-2 rounded-full inline-block mb-4 shadow-lg">
+            🥑 Sinh tố
+          </h2>
+          {smoothieProducts.map((prod) => (
+            <div
+              key={prod.id}
+              onClick={() => handleAdd(prod)}
+              className="flex items-center justify-between border-b border-dashed border-purple-300 py-2 px-5 cursor-pointer hover:bg-purple-200/40 rounded-lg transition duration-200 group"
+            >
+              <div className="flex items-center gap-3">
+                <img
+                  src={prod.image}
+                  alt={prod.name}
+                  className="w-14 h-14 rounded-full object-cover bg-white"
+                />
+                <div>
+                  <p className="text-purple-600 font-semibold leading-tight group-hover:text-purple-700">
+                    {prod.name}
+                  </p>
+                  <p className="text-purple-400 text-sm">{prod.name_en}</p>
                 </div>
-                <p className="text-pink-600 font-bold text-xl">
-                  {Number(prod.price).toLocaleString("vi-VN")}đ
-                </p>
               </div>
-            ))}
-          </div>
+              <p className="text-purple-600 font-bold text-xl">
+                {Number(prod.price).toLocaleString("vi-VN")}đ
+              </p>
+            </div>
+          ))}
         </div>
       </div>
+
+      {/* 🥤 THỨC UỐNG KHÁC */}
+      <div className="relative rounded-xl overflow-hidden shadow-lg">
+        <div className="absolute inset-0 bg-gradient-to-br from-pink-100/90 to-orange-100/80"></div>
+        <div className="relative p-6">
+          <h2 className="bg-pink-400 text-white px-6 py-2 rounded-full inline-block mb-4 shadow-lg">
+            🥤 Nước uống khác
+          </h2>
+          {otherProducts.map((prod) => (
+            <div
+              key={prod.id}
+              onClick={() => handleAdd(prod)}
+              className="flex items-center justify-between border-b border-dashed border-orange-300 py-2 px-5 cursor-pointer hover:bg-pink-200/40 rounded-lg transition duration-200 group"
+            >
+              <div className="flex items-center gap-3">
+                <img
+                  src={prod.image}
+                  alt={prod.name}
+                  className="w-14 h-14 rounded-full object-cover bg-white"
+                />
+                <div>
+                  <p className="text-pink-600 font-semibold leading-tight group-hover:text-pink-700">
+                    {prod.name}
+                  </p>
+                  <p className="text-orange-400 text-sm">{prod.name_en}</p>
+                </div>
+              </div>
+              <p className="text-pink-600 font-bold text-xl">
+                {Number(prod.price).toLocaleString("vi-VN")}đ
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
     </div>
     <Toaster />
     </>

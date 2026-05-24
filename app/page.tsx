@@ -4,7 +4,7 @@ import ProductItem from "./component/ProductItem";
 import { getProductByType } from './api/productState';
 
 export default async function Home() {
-  const {singleProducts, mixProducts, otherProducts} = await getProductByType();
+  const {singleProducts, mixProducts, smoothieProducts, otherProducts} = await getProductByType();
 
   return (
     <>
@@ -41,6 +41,7 @@ export default async function Home() {
           ))}
         </div>
         <br/>
+        
         <h2 className="text-2xl md:text-3xl font-bold text-center text-green-700 mb-8">
           Nước ép mix
         </h2>
@@ -51,6 +52,18 @@ export default async function Home() {
           ))}
         </div>
         <br/>
+
+        <h2 className="text-2xl md:text-3xl font-bold text-center text-green-700 mb-8">
+          Sinh tố
+        </h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {smoothieProducts.map(({id, image, title, price}) => (
+            <ProductItem key={id} id={id} image={image} title={title} price={price}/>
+          ))}
+        </div>
+        <br/>
+
         <h2 className="text-2xl md:text-3xl font-bold text-center text-green-700 mb-8">
           Nước uống khác
         </h2>

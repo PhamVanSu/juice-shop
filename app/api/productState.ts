@@ -42,7 +42,8 @@ export const getProductByType = async () => {
   // Phân loại dựa trên danh sách sản phẩm đang hoạt động (hiển thị)
   const singleProducts = activeProducts.filter((i) => i.type === SINGLE);
   const mixProducts = activeProducts.filter((i) => i.type === MIX);
+  const smoothieProducts = activeProducts.filter((i) => i.type === SMOOTHIE);
   const otherProducts = activeProducts.filter((i) => i.type === OTHER);
 
-  return { singleProducts, mixProducts, otherProducts };
+  return { singleProducts, mixProducts, smoothieProducts, otherProducts };
 }

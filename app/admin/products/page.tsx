@@ -247,6 +247,7 @@ export default function AdminProducts() {
               <option value="all">Tất cả loại</option>
               <option value="single">Single</option>
               <option value="mix">Mix</option>
+              <option value="smoothie">smoothie</option>
               <option value="other">Other</option>
             </select>
             <button 
@@ -411,6 +412,7 @@ export default function AdminProducts() {
                         <select className="admin-input cursor-pointer" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
                           <option value="single">Single</option>
                           <option value="mix">Mix</option>
+                          <option value="smoothie">smoothie</option>
                           <option value="other">Other</option>
                         </select>
                       </label>
@@ -479,6 +481,8 @@ export default function AdminProducts() {
                           <option value="Carrot">Cà rốt</option>
                           <option value="Watermelon">Dưa hấu</option>
                           <option value="lemon">Chanh tươi</option>
+                          <option value="avocado">Bơ</option>
+                          <option value="Mango">Xoài</option>
                         </select>
 
                         <div className="flex items-center gap-1.5 w-32">

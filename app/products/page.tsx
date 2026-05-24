@@ -9,6 +9,7 @@ export default async function Products() {
   // Biến đổi toàn bộ các object phức tạp (như Timestamp) thành dữ liệu thuần túy (Plain Objects)
   const singleProducts = JSON.parse(JSON.stringify(data.singleProducts || []));
   const mixProducts = JSON.parse(JSON.stringify(data.mixProducts || []));
+  const smoothieProducts = JSON.parse(JSON.stringify(data.smoothieProducts || []));
   const otherProducts = JSON.parse(JSON.stringify(data.otherProducts || []));
   
   return (
@@ -33,7 +34,8 @@ export default async function Products() {
       {/* TRUYỀN DỮ LIỆU ĐÃ ĐƯỢC LÀM SẠCH XUỐNG CLIENT */}
       <ProductList 
         singleProducts={singleProducts} 
-        mixProducts={mixProducts} 
+        mixProducts={mixProducts}
+        smoothieProducts={smoothieProducts} 
         otherProducts={otherProducts} 
       />
     </div>
