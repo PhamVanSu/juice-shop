@@ -31,12 +31,10 @@ export default function AdminProducts() {
   const [formData, setFormData] = useState({
     title: "", name: "", name_en: "", sub_title: "", 
     price: "", image: "", description: "", 
-    type: "single", isVisible: true 
+    type: "single", size: "700ml", isVisible: true // Bổ sung trường size mặc định là 700ml
   });
   
   const [benefits, setBenefits] = useState<any[]>([]);
-  
-  // --- STATE MỚI: Quản lý định lượng hoa quả cần ép (ml) ---
   const [ingredients, setIngredients] = useState<IngredientConfig[]>([]);
 
   const fetchTotalCount = async () => {
@@ -92,7 +90,7 @@ export default function AdminProducts() {
     }
   };
 
-  // --- LOGIC ĐIỀU CHỈNH ĐỊNH LƯỢNG NGUYÊN LIỆU (Mới) ---
+  // --- LOGIC ĐIỀU CHỈNH ĐỊNH LƯỢNG NGUYÊN LIỆU ---
   const addIngredientField = () => {
     setIngredients([...ingredients, { name: "", ml: 300 }]);
   };
@@ -111,7 +109,7 @@ export default function AdminProducts() {
     setIngredients(ingredients.filter((_, i) => i !== index));
   };
 
-  // --- Logic cũ giữ nguyên ---
+  // --- LỢI ÍCH SỨC KHỎE ---
   const addBenefitField = () => {
     setBenefits([...benefits, { icon: "✨", title: "", content: "", color: "text-green-500" }]);
   };
@@ -142,8 +140,6 @@ export default function AdminProducts() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Chuyển mảng ingredients thành object cấu trúc phẳng { "Dứa": 300, "Táo": 300 } 
-      // để khớp hoàn hảo với logic đồng bộ tính toán ở trang Kitchen quầy bar
       const recipeObject: { [key: string]: number } = {};
       ingredients.forEach((ing) => {
         if (ing.name.trim()) {
@@ -154,7 +150,7 @@ export default function AdminProducts() {
       const dataToSave = {
         ...formData,
         benefits: benefits,
-        recipe: recipeObject, // Lưu trường này vào Firestore thay vì text thô
+        recipe: recipeObject,
         price: Number(formData.price),
         updatedAt: serverTimestamp(),
       };
@@ -193,8 +189,6 @@ export default function AdminProducts() {
     setEditingId(product.id);
     setBenefits(product.benefits || []);
     
-    // Đọc object công thức từ Firestore `recipe: { "Dứa": 300 }` 
-    // và phân tách ngược lại về dạng mảng `[{ name: "Dứa", ml: 300 }]` để điền vào Form
     if (product.recipe) {
       const parsedIngredients = Object.keys(product.recipe).map((key) => ({
         name: key,
@@ -214,6 +208,7 @@ export default function AdminProducts() {
       image: product.image || "",
       description: product.description || "",
       type: product.type || "single",
+      size: product.size || "700ml", // Lấy trường size từ database, fallback là 700ml
       isVisible: product.isVisible !== undefined ? product.isVisible : true,
     });
     setIsModalOpen(true);
@@ -227,7 +222,7 @@ export default function AdminProducts() {
     setFormData({ 
       title: "", name: "", name_en: "", sub_title: "", 
       price: "", image: "", description: "", 
-      type: "single", isVisible: true 
+      type: "single", size: "700ml", isVisible: true 
     });
   };
 
@@ -247,7 +242,7 @@ export default function AdminProducts() {
               <option value="all">Tất cả loại</option>
               <option value="single">Single</option>
               <option value="mix">Mix</option>
-              <option value="smoothie">smoothie</option>
+              <option value="smoothie">Smoothie</option>
               <option value="other">Other</option>
             </select>
             <button 
@@ -259,7 +254,7 @@ export default function AdminProducts() {
           </div>
         </div>
 
-        {/* ================= DANH SÁCH DẠNG THẺ (CARD VIEW) - CHỈ HIỆN TRÊN MOBILE ================= */}
+        {/* ================= DANH SÁCH DẠNG THẺ (CARD VIEW) - MOBILE ================= */}
         <div className="grid grid-cols-1 gap-4 md:hidden">
           {loading ? (
             <div className="p-10 text-center text-gray-400 bg-white rounded-xl border">Đang tải...</div>
@@ -271,7 +266,10 @@ export default function AdminProducts() {
                 <div className="flex items-center gap-3">
                   <img src={product.image} className="w-14 h-14 object-cover rounded-lg border bg-gray-50" alt="" />
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-gray-800 truncate text-base">{product.title}</div>
+                    <div className="font-bold text-gray-800 truncate text-base flex items-center gap-1.5">
+                      <span>{product.title}</span>
+                      {product.size && <span className="text-[10px] bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded border border-orange-100 font-bold">{product.size}</span>}
+                    </div>
                     <div className="text-xs text-gray-400 truncate mt-0.5">{product.name_en || "Chưa có tên EN"}</div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-green-600 font-bold text-sm">{product.price?.toLocaleString()}đ</span>
@@ -302,13 +300,14 @@ export default function AdminProducts() {
           )}
         </div>
 
-        {/* ================= DANH SÁCH DẠNG BẢNG (TABLE VIEW) - CHỈ HIỆN TRÊN DESKTOP ================= */}
+        {/* ================= DANH SÁCH DẠNG BẢNG (TABLE VIEW) - DESKTOP ================= */}
         <div className="hidden md:block bg-white rounded-2xl shadow-sm border overflow-hidden">
           <table className="w-full text-left">
             <thead className="bg-gray-50 text-gray-500 text-xs font-bold uppercase">
               <tr>
                 <th className="p-4">Ảnh</th>
                 <th className="p-4">Tên sản phẩm</th>
+                <th className="p-4">Dung tích (Size)</th>
                 <th className="p-4">Giá</th>
                 <th className="p-4">Loại</th>
                 <th className="p-4 text-center">Hiển thị</th>
@@ -317,7 +316,7 @@ export default function AdminProducts() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {loading ? (
-                <tr><td colSpan={6} className="p-10 text-center">Đang tải...</td></tr>
+                <tr><td colSpan={7} className="p-10 text-center">Đang tải...</td></tr>
               ) : (
                 products.map((product) => (
                   <tr key={product.id} className="hover:bg-orange-50/30">
@@ -325,6 +324,11 @@ export default function AdminProducts() {
                     <td className="p-4">
                       <div className="font-bold text-gray-800">{product.title}</div>
                       <div className="text-xs text-gray-400">{product.name_en}</div>
+                    </td>
+                    <td className="p-4">
+                      <span className="text-xs font-bold px-2 py-1 bg-gray-100 rounded-md text-gray-600">
+                        {product.size || "700ml"}
+                      </span>
                     </td>
                     <td className="p-4 text-green-600 font-bold">{product.price?.toLocaleString()}đ</td>
                     <td className="p-4"><span className="text-xs font-bold uppercase">{product.type}</span></td>
@@ -412,7 +416,7 @@ export default function AdminProducts() {
                         <select className="admin-input cursor-pointer" value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})}>
                           <option value="single">Single</option>
                           <option value="mix">Mix</option>
-                          <option value="smoothie">smoothie</option>
+                          <option value="smoothie">Smoothie</option>
                           <option value="other">Other</option>
                         </select>
                       </label>
@@ -424,9 +428,19 @@ export default function AdminProducts() {
                     <label className="block text-xs md:text-sm font-bold text-gray-600">Link hình ảnh <span className="text-red-500">*</span>
                       <input type="text" required className="admin-input" value={formData.image} onChange={(e) => setFormData({...formData, image: e.target.value})} />
                     </label>
-                    <label className="block text-xs md:text-sm font-bold text-gray-600">Tiêu đề phụ
-                      <input type="text" className="admin-input" value={formData.sub_title} onChange={(e) => setFormData({...formData, sub_title: e.target.value})} />
-                    </label>
+                    
+                    {/* BỔ SUNG TRƯỜNG CHỌN SIZE TẠI ĐÂY */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="block text-xs md:text-sm font-bold text-gray-600">Dung tích (Size)
+                        <select className="admin-input cursor-pointer font-bold text-orange-600" value={formData.size} onChange={(e) => setFormData({...formData, size: e.target.value})}>
+                          <option value="500ml">500ml</option>
+                          <option value="700ml">700ml</option>
+                        </select>
+                      </label>
+                      <label className="block text-xs md:text-sm font-bold text-gray-600">Tiêu đề phụ
+                        <input type="text" className="admin-input" value={formData.sub_title} onChange={(e) => setFormData({...formData, sub_title: e.target.value})} />
+                      </label>
+                    </div>
                     
                     <div className="flex items-center gap-2 pt-2">
                       <input 
@@ -449,7 +463,7 @@ export default function AdminProducts() {
                   </label>
                 </div>
 
-                {/* ================= MỤC MỚI: CẤU HÌNH ĐỊNH LƯỢNG HOA QUẢ (ML RECIPE) ================= */}
+                {/* CẤU HÌNH ĐỊNH LƯỢNG NGUYÊN LIỆU (ML RECIPE) */}
                 <div className="bg-orange-50/40 p-4 md:p-6 rounded-2xl border border-dashed border-orange-200">
                   <div className="flex justify-between items-center mb-4 gap-2">
                     <h3 className="text-xs md:text-sm font-black text-orange-600 uppercase tracking-wider flex items-center gap-1.5">

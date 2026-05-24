@@ -129,7 +129,7 @@ export default function ProductDetail() {
                     Khối lượng
                   </span>
                   <span className="text-sm font-bold text-pink-600 mt-1 bg-pink-50 px-3 py-1 rounded-full">
-                    700ml
+                    {product.size}
                   </span>
                 </div>
               </div>

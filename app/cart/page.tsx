@@ -82,6 +82,7 @@ export default function CartPage() {
             price: Number(item.price) || 0,
             quantity: Number(item.quantity) || 1,
             image: item.image || "",
+            size: item.size || "700ml",
             comment: item.comment || ""
           })),
           totalAmount: total || 0,
@@ -135,7 +136,7 @@ export default function CartPage() {
                       <img src={item.image} alt={item.title} className="w-16 h-16 rounded-lg object-cover shadow" />
                       <div>
                         <h2 className="font-bold text-gray-700">{item.title}</h2>
-                        <p className="text-sm text-gray-500">Đơn giá: {Number(item.price).toLocaleString()}đ - Khối lượng: 700ml</p>
+                        <p className="text-sm text-gray-500">Đơn giá: {Number(item.price).toLocaleString()}đ - Khối lượng: {item.size || "700ml"}</p>
                         <div className="flex items-center gap-2 mt-1 text-gray-400">
                           <button onClick={() => updateQuantity(item.cartId, item.quantity - 1)} className="bg-white w-6 h-6 rounded-full border border-gray-400">-</button>
                           <span className="text-sm font-bold text-gray-700">{item.quantity}</span>

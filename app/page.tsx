@@ -36,8 +36,8 @@ export default async function Home() {
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {singleProducts.map(({id, image, title, price}) => (
-            <ProductItem key={id} id={id} image={image} title={title} price={price}/>
+          {singleProducts.map(({id, image, title, price, size}) => (
+            <ProductItem key={id} id={id} image={image} title={title} price={price} size={size}/>
           ))}
         </div>
         <br/>
@@ -47,8 +47,8 @@ export default async function Home() {
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {mixProducts.map(({id, image, title, price}) => (
-            <ProductItem key={id} id={id} image={image} title={title} price={price}/>
+          {mixProducts.map(({id, image, title, price, size}) => (
+            <ProductItem key={id} id={id} image={image} title={title} price={price} size={size}/>
           ))}
         </div>
         <br/>
@@ -58,8 +58,8 @@ export default async function Home() {
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {smoothieProducts.map(({id, image, title, price}) => (
-            <ProductItem key={id} id={id} image={image} title={title} price={price}/>
+          {smoothieProducts.map(({id, image, title, price, size}) => (
+            <ProductItem key={id} id={id} image={image} title={title} price={price} size={size}/>
           ))}
         </div>
         <br/>
@@ -69,8 +69,8 @@ export default async function Home() {
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-          {otherProducts.map(({id, image, title, price}) => (
-            <ProductItem key={id} id={id} image={image} title={title} price={price}/>
+          {otherProducts.map(({id, image, title, price, size}) => (
+            <ProductItem key={id} id={id} image={image} title={title} price={price} size={size}/>
           ))}
         </div>
       </section>

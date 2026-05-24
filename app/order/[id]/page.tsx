@@ -185,7 +185,7 @@ export default function OrderSuccess() {
                 <div className="text-left">
                   <h3 className="font-bold text-gray-700">{item.title} {item.comment && `(${item.comment})`}</h3>
                   <p className="text-sm text-gray-500">
-                    {Number(item.price).toLocaleString()}đ x {item.quantity}
+                    Giá: {Number(item.price).toLocaleString()}đ x {item.quantity} cốc - Khối lượng: {item.size}
                   </p>
                 </div>
               </div>

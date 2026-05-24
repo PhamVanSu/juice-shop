@@ -10,16 +10,17 @@ interface ProductCardProps {
   title: string;
   price: string | number;
   image: string;
+  size: string;
 }
 
-export default function ProductCard({ id, title, price, image }: ProductCardProps) {
+export default function ProductCard({ id, title, price, image, size }: ProductCardProps) {
   const router = useRouter();
   const addToCart = useCart((state) => state.addToCart);
 
   // Logic cho nút Thêm vào giỏ
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault(); // Ngăn sự kiện nổi bọt nếu bọc trong Link (nếu có)
-    addToCart({ id, title, price, image });
+    addToCart({ id, title, price, image, size });
     toast.success(`Đã thêm ${title} vào giỏ hàng! 🥤`);
     // alert(`Đã thêm ${title} vào giỏ hàng!`);
   };
@@ -27,7 +28,7 @@ export default function ProductCard({ id, title, price, image }: ProductCardProp
   // Logic cho nút Mua ngay
   const handleBuyNow = (e: React.MouseEvent) => {
     e.preventDefault();
-    addToCart({ id, title, price, image });
+    addToCart({ id, title, price, image, size });
     router.push("/cart"); // Chuyển hướng ngay tới trang giỏ hàng/thanh toán
   };
 
@@ -57,7 +58,7 @@ export default function ProductCard({ id, title, price, image }: ProductCardProp
               Khối lượng
             </span>
             <span className="text-sm font-bold text-pink-600 mt-1 bg-pink-50 px-3 py-1 rounded-full">
-              700ml
+              {size}
             </span>
           </div>
         </div>

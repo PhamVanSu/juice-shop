@@ -8,6 +8,7 @@ interface CartItem {
   price: number;
   image: string;
   quantity: number;
+  size: string;
   comment: string;
 }
 
@@ -48,6 +49,7 @@ export const useCart = create<CartStore>()(
             image: product.image,
             comment: newComment,
             price: Number(product.price),
+            size: product.size || "700ml",
             quantity: product.quantity || 1,
             // Tạo cartId duy nhất cho dòng này để phục vụ việc xóa/sửa sau này ở trang giỏ hàng
             cartId: Date.now().toString() + Math.random().toString(36).substring(2, 9),

@@ -8,7 +8,8 @@ interface Product {
   name_en: string;
   price: number | string;
   image: string;
-  title: string
+  title: string;
+  size: string;
 }
 
 interface ProductListProps {
@@ -29,6 +30,7 @@ export default function ProductList({ singleProducts, mixProducts, smoothieProdu
       title: product.title, // Đồng bộ trường name thành title như khai báo ở Store
       price: Number(product.price),
       image: product.image,
+      size: product.size
     });
     toast.success(`Đã thêm ${product.title} vào giỏ hàng! 🥤`);
   };

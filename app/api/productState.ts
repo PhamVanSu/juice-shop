@@ -19,6 +19,7 @@ export interface IProduct {
   price: string | number; 
   image: string;
   type: string;
+  size: string;
   isVisible?: boolean; // Thêm trường này vào interface nếu chưa có
 }
 
