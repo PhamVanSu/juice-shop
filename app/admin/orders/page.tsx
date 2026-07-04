@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { 
   collection, 
@@ -21,30 +21,87 @@ const STATUS_OPTIONS = [
   { value: "cancelled", label: "Đã hủy", color: "bg-red-100 text-red-700 ring-red-200" },
 ];
 
+const ITEMS_PER_PAGE = 10; // Số lượng đơn hàng hiển thị trên một trang
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterMode, setFilterMode] = useState<"today" | "all">("today");
+  const [filterMode, setFilterMode] = useState<"today" | "custom">("today");
+  
+  // State phục vụ filter nâng cao
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [paymentFilter, setPaymentFilter] = useState<"all" | "paid" | "unpaid">("all");
 
+  // State phục vụ phân trang
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
+  // Khởi tạo ngày hôm nay mặc định cho ô input khi chọn custom
+  useEffect(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    setStartDate(todayStr);
+    setEndDate(todayStr);
+  }, []);
+
+  // Effect fetch dữ liệu từ Firestore
   useEffect(() => {
     setLoading(true);
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const todayTimestamp = Timestamp.fromDate(startOfDay);
+    setCurrentPage(1); // Reset về trang 1 khi đổi bộ lọc thời gian gốc
 
     let q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+
     if (filterMode === "today") {
-      q = query(q, where("createdAt", ">=", todayTimestamp));
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      q = query(q, where("createdAt", ">=", Timestamp.fromDate(startOfDay)));
+    } else if (filterMode === "custom" && startDate && endDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+
+      q = query(
+        q, 
+        where("createdAt", ">=", Timestamp.fromDate(start)),
+        where("createdAt", "<=", Timestamp.fromDate(end))
+      );
     }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setOrders(data);
       setLoading(false);
+    }, (error) => {
+      console.error("Firestore Error:", error);
+      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [filterMode]);
+  }, [filterMode, startDate, endDate]);
+
+  // Xử lý bộ lọc trạng thái thanh toán ngay tại Client (Không tốn thêm request Firestore)
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      if (paymentFilter === "paid") return order.isPaid === true;
+      if (paymentFilter === "unpaid") return order.isPaid !== true;
+      return true;
+    });
+  }, [orders, paymentFilter]);
+
+  // Tính toán dữ liệu phân trang
+  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
+  const paginatedOrders = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredOrders, currentPage]);
+
+  // Trở về trang 1 nếu bộ lọc thanh toán làm số lượng trang giảm đi
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [filteredOrders, totalPages, currentPage]);
 
   // Hàm cập nhật trạng thái đơn hàng lên Firebase
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
@@ -78,33 +135,78 @@ export default function AdminOrders() {
     <div className="min-h-screen bg-gray-50 p-2 md:p-8">
       <div className="max-w-7xl mx-auto">
         
-        {/* Header & Bộ lọc thời gian */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 px-2 sm:px-0">
-          <h1 className="text-xl md:text-2xl font-bold text-gray-800">Danh sách Đơn hàng</h1>
-          <div className="flex bg-white p-1 rounded-lg shadow-sm border border-gray-200 w-full sm:w-auto">
-            {["today", "all"].map((mode) => (
+        {/* Header & Bộ lọc thời gian chính */}
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 gap-4 px-2 sm:px-0 bg-white p-4 rounded-xl shadow-sm border">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-800">Danh sách Đơn hàng</h1>
+            <p className="text-xs text-gray-500 mt-1">Tìm thấy {filteredOrders.length} đơn hàng</p>
+          </div>
+          
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full lg:w-auto">
+            {/* Switch chế độ lọc ngày */}
+            <div className="flex bg-gray-100 p-1 rounded-lg border w-full sm:w-auto">
               <button 
-                key={mode}
-                onClick={() => setFilterMode(mode as any)}
-                className={`flex-1 sm:flex-none px-4 py-1.5 rounded-md text-sm font-semibold transition text-center ${
-                  filterMode === mode ? "bg-orange-500 text-white" : "text-gray-500 hover:bg-gray-100"
+                onClick={() => setFilterMode("today")}
+                className={`px-4 py-1.5 rounded-md text-xs md:text-sm font-semibold transition text-center flex-1 sm:flex-none whitespace-nowrap ${
+                  filterMode === "today" ? "bg-orange-500 text-white shadow-sm" : "text-gray-500 hover:bg-gray-200"
                 }`}
               >
-                {mode === "today" ? "Hôm nay" : "Tất cả"}
+                Hôm nay
               </button>
-            ))}
+              <button 
+                onClick={() => setFilterMode("custom")}
+                className={`px-4 py-1.5 rounded-md text-xs md:text-sm font-semibold transition text-center flex-1 sm:flex-none whitespace-nowrap ${
+                  filterMode === "custom" ? "bg-orange-500 text-white shadow-sm" : "text-gray-500 hover:bg-gray-200"
+                }`}
+              >
+                Khoảng ngày
+              </button>
+            </div>
+
+            {/* Inputs cho Khoảng ngày (chỉ hiện khi chọn custom) */}
+            {filterMode === "custom" && (
+              <div className="flex items-center gap-2 bg-gray-50 p-1.5 rounded-lg border text-xs">
+                <input 
+                  type="date" 
+                  value={startDate} 
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="bg-transparent border-none outline-none text-gray-700 font-medium cursor-pointer"
+                />
+                <span className="text-gray-400">đến</span>
+                <input 
+                  type="date" 
+                  value={endDate} 
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="bg-transparent border-none outline-none text-gray-700 font-medium cursor-pointer"
+                />
+              </div>
+            )}
+            
+            {/* Bộ lọc thanh toán */}
+            <div className="flex items-center bg-gray-50 rounded-lg border px-2">
+              <span className="text-xs text-gray-400 mr-1 hidden sm:inline">Thanh toán:</span>
+              <select
+                value={paymentFilter}
+                onChange={(e) => setPaymentFilter(e.target.value as any)}
+                className="bg-transparent border-none outline-none text-xs text-gray-700 font-semibold py-2 cursor-pointer"
+              >
+                <option value="all">Tất cả đơn</option>
+                <option value="paid">✅ Đã thanh toán</option>
+                <option value="unpaid">❌ Chưa thanh toán</option>
+              </select>
+            </div>
           </div>
         </div>
 
         {loading ? (
           <div className="p-10 text-center text-gray-400 italic bg-white rounded-xl border">Đang tải dữ liệu đơn hàng...</div>
-        ) : orders.length === 0 ? (
-          <div className="p-10 text-center text-gray-400 italic bg-white rounded-xl border">Chưa có đơn hàng nào.</div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="p-10 text-center text-gray-400 italic bg-white rounded-xl border">Không tìm thấy đơn hàng nào phù hợp với bộ lọc.</div>
         ) : (
           <>
             {/* ================= GIAO DIỆN TRÊN ĐIỆN THOẠI (MOBILE CARD VIEW) ================= */}
             <div className="grid grid-cols-1 gap-4 md:hidden">
-              {orders.map((order) => {
+              {paginatedOrders.map((order) => {
                 const isPaid = order.isPaid === true;
                 const formattedDate = order.createdAt?.toDate().toLocaleString("vi-VN", {
                   day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false
@@ -182,7 +284,6 @@ export default function AdminOrders() {
                         </select>
                       </div>
                     </div>
-
                   </div>
                 );
               })}
@@ -203,7 +304,7 @@ export default function AdminOrders() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {orders.map((order) => {
+                    {paginatedOrders.map((order) => {
                       const isPaid = order.isPaid === true;
                       
                       return (
@@ -293,6 +394,41 @@ export default function AdminOrders() {
                 </table>
               </div>
             </div>
+
+            {/* ================= THANH PHÂN TRANG (PAGINATION BAR) ================= */}
+            {totalPages > 1 && (
+              <div className="flex justify-between items-center mt-4 px-2 sm:px-0">
+                <span className="text-xs md:text-sm text-gray-500">
+                  Trang <span className="font-bold text-gray-800">{currentPage}</span> / {totalPages}
+                </span>
+                
+                <div className="flex gap-2">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className={`px-3 py-1.5 rounded-lg border text-xs font-semibold shadow-sm transition ${
+                      currentPage === 1 
+                        ? "bg-gray-100 text-gray-300 cursor-not-allowed" 
+                        : "bg-white text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    Trước
+                  </button>
+                  
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className={`px-3 py-1.5 rounded-lg border text-xs font-semibold shadow-sm transition ${
+                      currentPage === totalPages 
+                        ? "bg-gray-100 text-gray-300 cursor-not-allowed" 
+                        : "bg-white text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    Sau
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
