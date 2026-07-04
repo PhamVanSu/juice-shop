@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { HiOutlineCheckCircle, HiOutlineCash, HiOutlineCalendar, HiChevronLeft, HiChevronRight, HiOutlineTrendingUp } from "react-icons/hi";
+import { HiOutlineCheckCircle, HiOutlineCash, HiOutlineCalendar, HiChevronLeft, HiChevronRight, HiOutlineTrendingUp, HiOutlineTrendingDown } from "react-icons/hi";
+import { BiCoffeeTogo } from "react-icons/bi"; // Thêm icon ly nước uống
 
 type FilterType = "day" | "month" | "year" | "custom";
 
@@ -107,29 +108,39 @@ export default function AdminStatistics() {
   // --- LOGIC TỔNG HỢP DOANH THU ---
   const totalRevenue = filteredOrders.reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
 
-  // --- LOGIC TỔNG HỢP SẢN PHẨM ĐÃ BÁN ---
-  const productSalesMap = filteredOrders.reduce((acc: { [key: string]: ProductSales }, order) => {
-    order.items?.forEach((item: any) => {
-      const title = item.title;
-      const qty = Number(item.quantity) || 0;
-      const price = Number(item.price) || 0;
+  // --- LOGIC TỔNG HỢP SẢN PHẨM ĐÃ BÁN & TỔNG SỐ LY BÁN ĐƯỢC ---
+  const { sortedProductSales, totalCups } = useMemo(() => {
+    let cupsCounter = 0;
+    
+    const productSalesMap = filteredOrders.reduce((acc: { [key: string]: ProductSales }, order) => {
+      order.items?.forEach((item: any) => {
+        const title = item.title;
+        const qty = Number(item.quantity) || 0;
+        const price = Number(item.price) || 0;
 
-      if (!acc[title]) {
-        acc[title] = {
-          title: title,
-          quantity: 0,
-          revenue: 0,
-          image: item.image // Lưu lại ảnh để hiển thị trực quan nếu có
-        };
-      }
-      acc[title].quantity += qty;
-      acc[title].revenue += qty * price;
-    });
-    return acc;
-  }, {});
+        cupsCounter += qty; // Cộng dồn tổng số ly
 
-  // Chuyển object thành mảng và sắp xếp theo số lượng bán giảm dần (Món bán nhiều nhất lên đầu)
-  const sortedProductSales = Object.values(productSalesMap).sort((a, b) => b.quantity - a.quantity);
+        if (!acc[title]) {
+          acc[title] = {
+            title: title,
+            quantity: 0,
+            revenue: 0,
+            image: item.image
+          };
+        }
+        acc[title].quantity += qty;
+        acc[title].revenue += qty * price;
+      });
+      return acc;
+    }, {});
+
+    const sortedArray = Object.values(productSalesMap).sort((a, b) => b.quantity - a.quantity);
+
+    return {
+      sortedProductSales: sortedArray,
+      totalCups: cupsCounter
+    };
+  }, [filteredOrders]);
   
   // --- LOGIC PHÂN TRANG TRÊN MẢNG ĐÃ LỌC ---
   const totalPages = Math.ceil(filteredOrders.length / pageSize) || 1;
@@ -190,19 +201,29 @@ export default function AdminStatistics() {
         </header>
 
         {/* Thẻ tóm tắt doanh số */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8">
           <div className="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4 md:gap-5">
             <div className="p-3 md:p-4 bg-green-100 text-green-600 rounded-xl md:rounded-2xl"><HiOutlineCash size={28}/></div>
             <div>
               <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest">Doanh thu kết quả</p>
-              <p className="text-xl md:text-3xl font-black text-gray-800">{totalRevenue.toLocaleString()}đ</p>
+              <p className="text-xl md:text-2xl lg:text-3xl font-black text-gray-800">{totalRevenue.toLocaleString()}đ</p>
             </div>
           </div>
+          
+          {/* THẺ MỚI BỔ SUNG: THỐNG KÊ TỔNG SỐ LY BÁN ĐƯỢC */}
+          <div className="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4 md:gap-5">
+            <div className="p-3 md:p-4 bg-orange-100 text-orange-600 rounded-xl md:rounded-2xl"><BiCoffeeTogo size={28}/></div>
+            <div>
+              <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest">Sản lượng bán ra</p>
+              <p className="text-xl md:text-2xl lg:text-3xl font-black text-gray-800">{totalCups.toLocaleString()} ly</p>
+            </div>
+          </div>
+
           <div className="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4 md:gap-5">
             <div className="p-3 md:p-4 bg-blue-100 text-blue-600 rounded-xl md:rounded-2xl"><HiOutlineCheckCircle size={28}/></div>
             <div>
               <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest">Số đơn hoàn tất</p>
-              <p className="text-xl md:text-3xl font-black text-gray-800">{filteredOrders.length} đơn</p>
+              <p className="text-xl md:text-2xl lg:text-3xl font-black text-gray-800">{filteredOrders.length} đơn</p>
             </div>
           </div>
         </div>
@@ -334,7 +355,6 @@ export default function AdminStatistics() {
 
                 {Array.from({ length: totalPages }, (_, index) => {
                   const pageNum = index + 1;
-                  // Chỉ hiển thị giới hạn các nút trang nếu số lượng trang quá nhiều để tránh vỡ giao diện
                   if (totalPages > 5 && Math.abs(currentPage - pageNum) > 2 && pageNum !== 1 && pageNum !== totalPages) {
                     return null; 
                   }

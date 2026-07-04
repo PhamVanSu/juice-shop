@@ -32,6 +32,7 @@ export default function AdminOrders() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [paymentFilter, setPaymentFilter] = useState<"all" | "paid" | "unpaid">("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all"); // <-- State mới cho lọc trạng thái
 
   // State phục vụ phân trang
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -80,14 +81,23 @@ export default function AdminOrders() {
     return () => unsubscribe();
   }, [filterMode, startDate, endDate]);
 
-  // Xử lý bộ lọc trạng thái thanh toán ngay tại Client (Không tốn thêm request Firestore)
+  // Xử lý bộ lọc trạng thái thanh toán + TRẠNG THÁI ĐƠN HÀNG tại Client
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
-      if (paymentFilter === "paid") return order.isPaid === true;
-      if (paymentFilter === "unpaid") return order.isPaid !== true;
-      return true;
+      // 1. Lọc theo thanh toán
+      const matchesPayment = 
+        paymentFilter === "all" ||
+        (paymentFilter === "paid" && order.isPaid === true) ||
+        (paymentFilter === "unpaid" && order.isPaid !== true);
+
+      // 2. Lọc theo trạng thái xử lý đơn hàng
+      const matchesStatus = 
+        statusFilter === "all" || 
+        (order.status || "pending") === statusFilter;
+
+      return matchesPayment && matchesStatus;
     });
-  }, [orders, paymentFilter]);
+  }, [orders, paymentFilter, statusFilter]);
 
   // Tính toán dữ liệu phân trang
   const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
@@ -96,12 +106,17 @@ export default function AdminOrders() {
     return filteredOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredOrders, currentPage]);
 
-  // Trở về trang 1 nếu bộ lọc thanh toán làm số lượng trang giảm đi
+  // Trở về trang 1 hoặc trang cuối hợp lệ nếu bộ lọc làm giảm số lượng trang dữ liệu
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(totalPages);
     }
   }, [filteredOrders, totalPages, currentPage]);
+
+  // Đưa trang về 1 khi thay đổi bất kỳ tiêu chí filter phụ nào
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [paymentFilter, statusFilter]);
 
   // Hàm cập nhật trạng thái đơn hàng lên Firebase
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
@@ -182,6 +197,23 @@ export default function AdminOrders() {
               </div>
             )}
             
+            {/* Bộ lọc trạng thái đơn hàng */}
+            <div className="flex items-center bg-gray-50 rounded-lg border px-2">
+              <span className="text-xs text-gray-400 mr-1 hidden sm:inline">Trạng thái:</span>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="bg-transparent border-none outline-none text-xs text-gray-700 font-semibold py-2 cursor-pointer"
+              >
+                <option value="all">Tất cả trạng thái</option>
+                {STATUS_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Bộ lọc thanh toán */}
             <div className="flex items-center bg-gray-50 rounded-lg border px-2">
               <span className="text-xs text-gray-400 mr-1 hidden sm:inline">Thanh toán:</span>
