@@ -12,6 +12,7 @@ import {
   doc,
   updateDoc 
 } from "firebase/firestore";
+import * as XLSX from "xlsx"; // <-- Import thư viện SheetJS để làm việc với Excel
 
 // Danh sách các trạng thái xử lý đơn hàng
 const STATUS_OPTIONS = [
@@ -32,7 +33,7 @@ export default function AdminOrders() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [paymentFilter, setPaymentFilter] = useState<"all" | "paid" | "unpaid">("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all"); // <-- State mới cho lọc trạng thái
+  const [statusFilter, setStatusFilter] = useState<string>("all"); 
 
   // State phục vụ phân trang
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -47,7 +48,7 @@ export default function AdminOrders() {
   // Effect fetch dữ liệu từ Firestore
   useEffect(() => {
     setLoading(true);
-    setCurrentPage(1); // Reset về trang 1 khi đổi bộ lọc thời gian gốc
+    setCurrentPage(1); 
 
     let q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
 
@@ -84,13 +85,11 @@ export default function AdminOrders() {
   // Xử lý bộ lọc trạng thái thanh toán + TRẠNG THÁI ĐƠN HÀNG tại Client
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
-      // 1. Lọc theo thanh toán
       const matchesPayment = 
         paymentFilter === "all" ||
         (paymentFilter === "paid" && order.isPaid === true) ||
         (paymentFilter === "unpaid" && order.isPaid !== true);
 
-      // 2. Lọc theo trạng thái xử lý đơn hàng
       const matchesStatus = 
         statusFilter === "all" || 
         (order.status || "pending") === statusFilter;
@@ -106,17 +105,64 @@ export default function AdminOrders() {
     return filteredOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredOrders, currentPage]);
 
-  // Trở về trang 1 hoặc trang cuối hợp lệ nếu bộ lọc làm giảm số lượng trang dữ liệu
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
       setCurrentPage(totalPages);
     }
   }, [filteredOrders, totalPages, currentPage]);
 
-  // Đưa trang về 1 khi thay đổi bất kỳ tiêu chí filter phụ nào
   useEffect(() => {
     setCurrentPage(1);
   }, [paymentFilter, statusFilter]);
+
+  // --- HÀM XUẤT FILE EXCEL TỪ DATA ĐANG QUERY ---
+  const handleExportExcel = () => {
+    if (filteredOrders.length === 0) {
+      alert("Không có dữ liệu phù hợp để xuất Excel!");
+      return;
+    }
+
+    // 1. Định dạng cấu trúc các cột cho file Excel đầu ra
+    const excelData = filteredOrders.map((order) => {
+      // Định dạng ngày giờ
+      const dateStr = order.createdAt?.toDate()
+        ? order.createdAt.toDate().toLocaleString("vi-VN")
+        : "";
+      
+      // Gộp danh sách các món uống thành chuỗi văn bản
+      const itemsStr = order.items
+        ?.map((item: any) => `${item.quantity}x ${item.title}${item.comment ? ` (Ghi chú: ${item.comment})` : ""}`)
+        .join(", ");
+
+      // Tìm nhãn tiếng Việt của trạng thái
+      const statusLabel = STATUS_OPTIONS.find(s => s.value === (order.status || "pending"))?.label || "Chờ xử lý";
+
+      return {
+        "Mã Đơn Hàng": `#${order.orderCode || ""}`,
+        "Thời Gian": dateStr,
+        "Tên Khách Hàng": order.customer?.name || "Ẩn danh",
+        "Số Điện Thoại": order.customer?.phone || "",
+        "Địa Chỉ Giao Hàng": order.customer?.address || "",
+        "Chi Tiết Sản Phẩm": itemsStr || "",
+        "Tổng Tiền (đ)": Number(order.totalAmount) || 0,
+        "Thanh Toán": order.isPaid === true ? "Đã trả tiền" : "Chưa trả tiền",
+        "Trạng Thái Xử Lý": statusLabel,
+      };
+    });
+
+    // 2. Tạo workbook và worksheet từ json dữ liệu đã định dạng
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Danh sách đơn hàng");
+
+    // Tự động điều chỉnh độ rộng cột cơ bản để file đẹp hơn
+    const maxColsWidth = [{ wch: 15 }, { wch: 22 }, { wch: 20 }, { wch: 15 }, { wch: 30 }, { wch: 45 }, { wch: 15 }, { wch: 15 }, { wch: 15 }];
+    worksheet["!cols"] = maxColsWidth;
+
+    // 3. Tiến hành tải tệp tin về máy client
+    const fileName = `DonHang_${filterMode === "today" ? "HomNay" : `${startDate}_den_${endDate}`}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
 
   // Hàm cập nhật trạng thái đơn hàng lên Firebase
   const handleUpdateStatus = async (orderId: string, newStatus: string) => {
@@ -132,7 +178,7 @@ export default function AdminOrders() {
     }
   };
 
-  // Hàm cập nhật trạng thái THANH TOÁN (Toggle giữa true / false)
+  // Hàm cập nhật trạng thái THANH TOÁN
   const handleTogglePayment = async (orderId: string, currentPaidStatus: boolean) => {
     try {
       const orderRef = doc(db, "orders", orderId);
@@ -152,12 +198,30 @@ export default function AdminOrders() {
         
         {/* Header & Bộ lọc thời gian chính */}
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 gap-4 px-2 sm:px-0 bg-white p-4 rounded-xl shadow-sm border">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold text-gray-800">Danh sách Đơn hàng</h1>
-            <p className="text-xs text-gray-500 mt-1">Tìm thấy {filteredOrders.length} đơn hàng</p>
+          <div className="flex justify-between items-center lg:block w-full lg:w-auto">
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold text-gray-800">Danh sách Đơn hàng</h1>
+              <p className="text-xs text-gray-500 mt-1">Tìm thấy {filteredOrders.length} đơn hàng</p>
+            </div>
+            
+            {/* NÚT XUẤT EXCEL TRÊN MOBILE */}
+            <button
+              onClick={handleExportExcel}
+              className="lg:hidden bg-green-600 hover:bg-green-700 text-white font-bold text-xs py-2 px-3 rounded-lg shadow-sm transition"
+            >
+              📊 Xuất Excel
+            </button>
           </div>
           
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center w-full lg:w-auto">
+            {/* NÚT XUẤT EXCEL TRÊN PC */}
+            <button
+              onClick={handleExportExcel}
+              className="hidden lg:flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white font-bold text-sm py-2 px-4 rounded-lg shadow-sm transition mr-2"
+            >
+              <span>📊</span> Xuất Excel
+            </button>
+
             {/* Switch chế độ lọc ngày */}
             <div className="flex bg-gray-100 p-1 rounded-lg border w-full sm:w-auto">
               <button 
@@ -246,13 +310,11 @@ export default function AdminOrders() {
 
                 return (
                   <div key={order.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col gap-3">
-                    {/* Hàng 1: Mã đơn & Thời gian */}
                     <div className="flex justify-between items-center border-b border-gray-100 pb-2">
                       <span className="text-[14px] font-bold text-red-600 uppercase">#{order.orderCode}</span>
                       <span className="text-xs text-gray-500 font-medium">{formattedDate}</span>
                     </div>
 
-                    {/* Hàng 2: Thông tin khách hàng */}
                     <div>
                       <div className="font-bold text-gray-800 text-base">{order.customer?.name}</div>
                       <div className="text-sm text-gray-600 mt-0.5">{order.customer?.phone}</div>
@@ -263,7 +325,6 @@ export default function AdminOrders() {
                       )}
                     </div>
 
-                    {/* Hàng 3: Danh sách món uống */}
                     <div className="space-y-1.5 my-1">
                       {order.items?.map((item: any, idx: number) => (
                         <div key={idx} className="text-[13px] text-gray-700 bg-blue-50/70 px-3 py-1.5 rounded border border-blue-100/60">
@@ -277,7 +338,6 @@ export default function AdminOrders() {
                       ))}
                     </div>
 
-                    {/* Hàng 4: Tổng tiền thanh toán */}
                     <div className="flex justify-between items-center bg-orange-50/30 p-2 rounded-lg border border-dashed border-orange-200">
                       <span className="text-sm text-gray-500 font-medium">Tổng tiền:</span>
                       <span className="font-black text-lg text-green-600">
@@ -285,9 +345,7 @@ export default function AdminOrders() {
                       </span>
                     </div>
 
-                    {/* Hàng 5: Các nút tương tác, đổi trạng thái nhanh */}
                     <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 mt-1">
-                      {/* Trạng thái trả tiền */}
                       <button
                         onClick={() => handleTogglePayment(order.id, isPaid)}
                         className={`text-xs font-bold uppercase py-2.5 rounded-lg border shadow-sm text-center transition ${
@@ -299,7 +357,6 @@ export default function AdminOrders() {
                         {isPaid ? "✅ Đã trả" : "❌ Chưa trả"}
                       </button>
 
-                      {/* Trạng thái làm nước */}
                       <div className="relative">
                         <select 
                           value={order.status || "pending"}
@@ -341,7 +398,6 @@ export default function AdminOrders() {
                       
                       return (
                         <tr key={order.id} className="hover:bg-orange-50/20 transition-colors align-top">
-                          {/* Thời gian */}
                           <td className="p-4 whitespace-nowrap">
                             <div className="font-bold text-gray-700">
                               {order.createdAt?.toDate().toLocaleString("vi-VN", {
@@ -357,7 +413,6 @@ export default function AdminOrders() {
                             </div>
                           </td>
 
-                          {/* Khách hàng */}
                           <td className="p-4">
                             <div className="font-bold text-gray-800">{order.customer?.name}</div>
                             <div className="text-xs text-gray-500">{order.customer?.phone}</div>
@@ -366,7 +421,6 @@ export default function AdminOrders() {
                             </div>
                           </td>
 
-                          {/* Sản phẩm */}
                           <td className="p-4">
                             <div className="space-y-1.5">
                               {order.items?.map((item: any, idx: number) => (
@@ -382,14 +436,12 @@ export default function AdminOrders() {
                             </div>
                           </td>
 
-                          {/* Tiền */}
                           <td className="p-4 whitespace-nowrap">
                             <div className="font-black text-green-600 text-base">
                               {Number(order.totalAmount).toLocaleString()}đ
                             </div>
                           </td>
 
-                          {/* Thanh toán */}
                           <td className="p-4 text-center whitespace-nowrap min-w-[130px]">
                             <button
                               onClick={() => handleTogglePayment(order.id, isPaid)}
@@ -403,7 +455,6 @@ export default function AdminOrders() {
                             </button>
                           </td>
 
-                          {/* Trạng thái xử lý */}
                           <td className="p-4 text-center min-w-[140px]">
                             <select 
                               value={order.status || "pending"}
